@@ -8,6 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
 import Seg from "./src/Seg";
+import TimePick from "./src/TimePick";
 import PinMap from "./src/PinMap";
 import { searchOffline, searchOnline, streetName, suggest, suggestOnline } from "./src/places";
 import TripMap, { hasTripMap } from "./src/TripMap";
@@ -189,13 +190,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
         {hasTripMap && <View style={{ marginTop: 12 }}><TripMap s={s} c={c} from={from} to={to} onSet={setByMap} /></View>}
 
         <Text style={[s.label, { marginTop: 12 }]}>Arrive by</Text>
-        <View style={[s.row, { alignItems: "center" }]}>
-          <Btn s={s} kind="ghost" small label="−15" onPress={() => setArrive((arrive - 15 + 1440) % 1440)} />
-          <Btn s={s} kind="ghost" small label="−5" onPress={() => setArrive((arrive - 5 + 1440) % 1440)} />
-          <Text style={s.timeBig} accessibilityLabel={`Arrive by ${hm(arrive)}`}>{hm(arrive)}</Text>
-          <Btn s={s} kind="ghost" small label="+5" onPress={() => setArrive((arrive + 5) % 1440)} />
-          <Btn s={s} kind="ghost" small label="+15" onPress={() => setArrive((arrive + 15) % 1440)} />
-        </View>
+        <TimePick s={s} c={c} value={arrive} onChange={setArrive} dayOff={dayOff} nowMin={nowMin()} />
         <View style={[s.row, { marginTop: 8 }]}>
           <Seg s={s} value={dayOff} onChange={setDayOff} options={[[0, "Today"], [1, "Tomorrow"]]} />
           <Seg s={s} value={school} onChange={setSchool} options={[[true, "School day"], [false, "No school"]]} />

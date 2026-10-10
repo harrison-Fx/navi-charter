@@ -43,7 +43,7 @@
     <h1>Kuching Trip Advisor · web prototype</h1>
     <h2>4-minute demo script</h2>
     <div class="step"><div class="n">0</div><b>Set the trip</b><span>Type in To: "hospital near Petra Jaya" — it reads the context and ranks Normah first. Or tap the map for A then B and drag a pin to fine-tune.</span></div>
-    <div class="step"><div class="n">1</div><b>Normal morning</b><span>Pending → Batu Lintang, arrive 07:30, Tomorrow, School day, 90%. Tap "When should I leave?" Read the leave time and risk; point at "Why this advice".</span></div>
+    <div class="step"><div class="n">1</div><b>Normal morning</b><span>Pending → Batu Lintang, arrive 07:30 (tap 07:30, or type the time, or drag the day bar), Tomorrow, School day, 90%. Tap "When should I leave?" Read the leave time and risk; point at "Why this advice".</span></div>
     <div class="step"><div class="n">2</div><b>School day vs holiday</b><span>Stutong → Satok, 07:30. School day vs No school: the leave time moves back by several minutes.</span></div>
     <div class="step"><div class="n">3</div><b>Something goes wrong</b><span>Road reports → Padungan–Pending → Closed. Ask again: new road, earlier leave time, main risk "Road closure". Show "Open in Google Maps".</span></div>
     <div class="step"><div class="n">4</div><b>Outside-Kuching commuter</b><span>Samarahan → City Centre, arrive 08:00. "Traffic from outside Kuching" in the why box; map switches to Greater Kuching.</span></div>
@@ -58,6 +58,6 @@
   document.querySelectorAll('.step').forEach(function(el){ el.addEventListener('click', function(){ el.classList.toggle('done'); }); });
   addEventListener('keydown', function(e){ var t=e.target.tagName; if ((e.key==='s'||e.key==='S') && t!=='INPUT' && t!=='TEXTAREA' && !e.target.isContentEditable){ document.body.classList.toggle('clean'); fit(); } });
 </script>
-<script src="./_expo/static/js/web/index-591d6efb7155e5f11423c8d763a619eb.js" defer></script>
+<script src="./_expo/static/js/web/index-b33f324b93c610ac915a0b5252d89a92.js" defer></script>
 </body>
 </html>
