@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, Switch, Modal, FlatList, Linking, ActivityIndicator, useColorScheme, useWindowDimensions, Platform, StyleSheet } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -9,6 +9,7 @@ import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from
 import RouteMap from "./src/RouteMap";
 import Seg from "./src/Seg";
 import TimePick from "./src/TimePick";
+import Result from "./src/Result";
 import PinMap from "./src/PinMap";
 import { searchOffline, searchOnline, streetName, suggest, suggestOnline } from "./src/places";
 import TripMap, { hasTripMap } from "./src/TripMap";
@@ -111,6 +112,8 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const [res, setRes] = useState(null);
   const [showReport, setShowReport] = useState(false);
   const [pin, setPin] = useState(null);   // { which: "from" | "to" }
+  const scroller = useRef(null), resY = useRef(0);
+  useEffect(() => { if (res && !res.err) setTimeout(() => scroller.current && scroller.current.scrollTo({ y: Math.max(0, resY.current - 12), animated: true }), 80); }, [res]);
 
   useEffect(() => { setSchool(!isWeekend(dayOff)); }, [dayOff]);
   useEffect(() => { setRes(null); }, [from, to, arrive, dayOff, school, conf, reports, settings.commOn, settings.vansOn, settings.sess]);
@@ -176,7 +179,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const risk = pl <= 10 ? ["Low risk", "ok"] : pl <= 25 ? ["Medium risk", "warn"] : ["High risk", "bad"];
   const causes = b ? riskCauses(b, active) : [];
   return (
-    <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scroller} contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
       <View style={s.card}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <Text style={[s.label, { marginBottom: 0 }]}>From</Text>
@@ -201,73 +204,20 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
         {active.length > 0 && <Text style={[s.hint, { marginTop: 8 }]}>{active.length} road report{active.length > 1 ? "s" : ""} included.</Text>}
       </View>
 
-      {res?.err && <View style={s.card}><Text style={s.body}>{res.err}</Text></View>}
-      {b && (
-        <View style={s.card}>
-          <View style={[s.row, { alignItems: "baseline", flexWrap: "wrap" }]}>
-            <Text style={s.cap}>LEAVE BY</Text>
-            <Text style={s.leave}>{hm(b.leave)}</Text>
-            <Pill s={s} c={c} tone={risk[1]} text={`${risk[0]} · ${pl}% chance of being late`} />
-          </View>
-          <Text style={s.via}>{[from.label, ...b.via, to.label].join(" → ")}</Text>
-          <View style={[s.row, { marginTop: 10 }]}>
-            <Fact s={s} k="Arrive between" v={`${hm(b.lo)}–${hm(b.hi)}`} />
-            <Fact s={s} k="Most likely" v={hm(b.mid)} />
-            <Fact s={s} k="Distance" v={`${b.km.toFixed(1)} km`} />
-          </View>
-          {causes.length > 0 && (
-            <View style={[s.whyBox, { borderColor: c.line }]}>
-              <Text style={s.label}>Why this advice</Text>
-              <Text style={s.body}><Text style={{ fontWeight: "700" }}>Main risk: {causes[0].label}.</Text> {causes[0].detail}</Text>
-              {causes.length > 1 && <Text style={s.hint}>Also: {causes.slice(1).map(x => x.label.toLowerCase()).join(", ")}.</Text>}
-            </View>
-          )}
-          <View style={s.notes}>
-            {!b.ok && <Note s={s} c={c.slow} t={`Even leaving at ${hm(b.leave)} doesn't reach ${Math.round(conf * 100)}% sure. Leave as early as you can.`} />}
-            {[...new Map(b.schools.map(x => [x.c, x])).values()].map(x => <Note key={"s" + x.c} s={s} c={c.school} t={`${x.road}: school drop-off or pick-up when you pass (~${hm(x.at)}). School hours not confirmed yet.`} />)}
-            {active.filter(r => r.kind === "closed").map(r => <Note key={"r" + r.id} s={s} c={c.slow} t={`Avoiding ${roadName(r.road)} (you reported it closed).`} />)}
-            {b.busy.filter(x => x.vc > .85).map(x => <Note key={"b" + x.c} s={s} c={c.slow} t={`${x.road} is busy (${Math.round(x.vc * 100)}% full) when you pass${x.reportedJam ? ", reported jam" : ""}${x.outsideShare > .3 && x.outsideFrom ? `, about ${Math.round(x.outsideShare * 100)}% of it people driving in from ${x.outsideFrom} and other areas around Kuching` : ""}.`} />)}
-            {b.vans > 0 && <Note s={s} c={c.accent} t={`${b.vans} other planned trips use a road on this route around your time.`} />}
-            {!b.schools.length && school && <Note s={s} c={c.ok} t="No school drop-off or pick-up on this route at your time." />}
-          </View>
-          <RouteMap res={res} colors={c} width={Math.min(width - 64, 520)} />
-          <View style={{ gap: 8, marginTop: 10 }}>
-            <Btn s={s} kind="solid" label="Open in Google Maps" onPress={() => Linking.openURL(link.url)} />
-            {link.stop ? <Btn s={s} kind="ghost" label="Open without the extra stop" onPress={() => Linking.openURL(link.plain)} /> : null}
-            <View style={s.row}>
-              <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Remind me" onPress={remind} /></View>
-              <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Send as message" onPress={() => Share.share({ message: msg }).catch(() => {})} /></View>
-            </View>
-          </View>
-          <Text style={[s.hint, { marginTop: 8 }]}>
-            {link.stop ? `This way lets you leave ${res.gain || "a few"} min later than the usual road, so the link adds a stop at ${link.stop} to make Google Maps follow it. If Maps turns into a side street there, use the link without the stop.` : res.keptUsual ? "Another way was only slightly quicker, so we kept the usual road. Google Maps picks the exact streets." : "This is the usual road, so there's no extra stop. Google Maps picks the exact streets."}
-            {` We tried the trip many times with different made-up traffic; 8 in 10 tries arrived in the range shown.`}
-          </Text>
-          <Text style={[s.label, { marginTop: 14 }]}>Testing? Start a test trip</Text>
-          <View style={s.row}>
-            <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Following advice" onPress={() => startTest("follow")} /></View>
-            <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="My usual way" onPress={() => startTest("usual")} /></View>
-          </View>
-        </View>
-      )}
-
-      {b && (
-        <View style={s.card}>
-          <Text style={s.h2}>Other ways to go</Text>
-          {res.routes.map((r, i) => (
-            <View key={i} style={[s.listRow, r === b && { backgroundColor: c.accentSoft }]}>
-              <Text style={[s.body, { flex: 1 }]}>{r.via.join(" → ") || "Direct"}{r === b ? "  · advised" : ""}</Text>
-              <Text style={s.mono}>{r.ok ? hm(r.leave) : "—"} · {Math.round(r.typical)} min · {Math.round(r.pLate * 100)}%</Text>
-            </View>
-          ))}
-          <Text style={s.hint}>Leave-by time · usual drive · chance late. Spreading people over different roads stops everyone piling onto the same "fast" one.</Text>
-        </View>
-      )}
-
       <View style={s.card}>
         <Pressable onPress={() => setShowReport(!showReport)} accessibilityRole="button"><Text style={s.h2}>Road reports {active.length ? `(${active.length})` : ""} {showReport ? "▴" : "▾"}</Text></Pressable>
         {showReport && <ReportBox {...{ s, c, active, reports, setRe }} />}
       </View>
+
+      {res?.err && <View style={s.card}><Text style={s.body}>{res.err}</Text></View>}
+      {b && (
+        <View onLayout={e => { resY.current = e.nativeEvent.layout.y; }}>
+          <Result {...{ s, c, res, b, from, to, arrive, dayOff, conf, school, causes, risk, pl, link, Btn, Pill, Note, RouteMap }} nowMin={nowMin()} mapWidth={Math.min(width - 64, 520)}
+            onMaps={() => Linking.openURL(link.url)} onMapsPlain={() => Linking.openURL(link.plain)} onRemind={remind}
+            onShare={() => Share.share({ message: msg }).catch(() => {})} onTest={startTest}
+            closedNotes={active.filter(r => r.kind === "closed").length ? <Text style={[s.hint, { marginTop: 6 }]}>Avoiding {active.filter(r => r.kind === "closed").map(r => roadName(r.road)).join(", ")} (reported closed).</Text> : null} />
+        </View>
+      )}
 
       <PlacePicker visible={!!picker} s={s} c={c} places={places} allowHere={picker === "from"}
         onClose={() => setPicker(null)}
