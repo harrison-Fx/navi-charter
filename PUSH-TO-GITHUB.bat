@@ -1,9 +1,9 @@
 @echo off
 title Kuching Trip Advisor - put this project on GitHub
 cd /d "%~dp0"
-set "REPO=kuching-trip-advisor"
+set "REPO=navi-charter"
 
-echo This puts the project on your GitHub as a PRIVATE repository called %REPO%.
+echo This puts the project on your GitHub in the repository called %REPO%.
 echo.
 
 where git >nul 2>nul
