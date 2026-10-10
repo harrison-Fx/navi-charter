@@ -227,3 +227,8 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Place picker: search box with built-in Kuching areas and about 30 landmarks (positions approximate, ±1 km; `src/places.js`), optional "road or taman" and "near a landmark" fields that boost matches, and "Search online" (OpenStreetMap Nominatim, Greater Kuching only, needs internet; untested here because the workspace has no internet).
 - "Drop a pin on the map" / "Adjust pin" (`src/PinMap.js`): tap or drag on a Kuching / Greater Kuching map; shows the nearest area; Google Maps gets the exact point.
 - Browser demo: pickers open inside the phone frame (`src/Sheet.web.js`). Checked here: search → pick → drag pin → advice; road picker when scrolled; Android bundle builds.
+
+## 11 Oct, 02:20 — Web becomes the main demo; real street map
+- Ming: go web-based for now (prototype demo), integrate more map features to ease setting start and destination.
+- Plan screen (web): real OpenStreetMap street map (Leaflet, `src/TripMap.web.js`): "Tap the map to set A · Start / B · Destination" (switches to B after A), draggable A/B pins, "Locate me" (browser location), pins renamed to the street when online (Nominatim reverse). Without internet the map says so; place list and simple pin map still work. Phone build unchanged (TripMap.js is empty there).
+- `npm run web-demo` also copies the build to `docs/` for GitHub Pages (needs Ming to enable Pages: main /docs). Tiles can't load in the private online copy (page blocks outside images) or in Claude's offline workspace, so the street map was checked here only for tapping/pins and the offline note.

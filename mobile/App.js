@@ -8,7 +8,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
 import PinMap from "./src/PinMap";
-import { searchOffline, searchOnline } from "./src/places";
+import { searchOffline, searchOnline, streetName } from "./src/places";
+import TripMap, { hasTripMap } from "./src/TripMap";
 import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
 import Sheet from "./src/Sheet";
 
@@ -112,6 +113,14 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   useEffect(() => { setSchool(!isWeekend(dayOff)); }, [dayOff]);
   useEffect(() => { setRes(null); }, [from, to, arrive, dayOff, school, conf, reports, settings.commOn, settings.vansOn, settings.sess]);
 
+  // a point chosen on the street map (web) or by GPS from the map's "Locate me"
+  const setByMap = (which, ll, gps) => {
+    const n = nearest(ll), km = n.km < 1 ? "under 1" : n.km.toFixed(1);
+    const p = { kind: gps && which === "from" ? "here" : "spot", node: n.name, ll, label: gps ? "My location" : `Pin near ${n.name}`, note: `near ${n.name}, ${km} km away` };
+    (which === "from" ? setFrom : setTo)(p);
+    if (!gps) streetName(ll).then(st => { if (st) (which === "from" ? setFrom : setTo)(cur => cur.ll === ll ? { ...cur, label: `${st} (near ${n.name})` } : cur); });
+  };
+
   const useMyLocation = async () => {
     setLocating(true);
     try {
@@ -176,6 +185,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
         <Text style={[s.label, { marginTop: 12 }]}>To</Text>
         <Pressable style={s.select} onPress={() => setPicker("to")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{to.label}</Text><Text style={s.chev}>▾</Text></Pressable>
         <PlaceNote s={s} p={to} onPin={() => setPin({ which: "to" })} />
+        {hasTripMap && <View style={{ marginTop: 12 }}><TripMap s={s} c={c} from={from} to={to} onSet={setByMap} /></View>}
 
         <Text style={[s.label, { marginTop: 12 }]}>Arrive by</Text>
         <View style={[s.row, { alignItems: "center" }]}>

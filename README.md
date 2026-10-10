@@ -12,6 +12,10 @@ Everything is a **simulation** (BPR congestion + Monte Carlo). Nothing here is a
 
 ---
 
+## Web prototype (main demo)
+
+The app runs in any browser: `mobile/START-WEB-DEMO.bat`, or open `mobile/web-demo/index.html`. It has a real street map (OpenStreetMap; needs internet): tap A/B to set start and destination, drag pins, "Locate me", search by name. Public link: turn on GitHub Pages once (repo Settings → Pages → Deploy from a branch → `main` / `/docs`), then it's at `https://harrison-fx.github.io/navi-charter/`. Rebuild after changes: `cd mobile && npm run web-demo` (updates `web-demo/` and `docs/`).
+
 ## Quick start
 
 ```

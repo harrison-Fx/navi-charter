@@ -26,20 +26,22 @@
   body.clean .cues { display:none; }
   @media (max-width: 900px) { .cues { display:none; } .stage { padding:0; } .phone { zoom:1 !important; width:100%; height:100%; border-radius:0; padding:0; box-shadow:none; } .phone::before { display:none; } #root { border-radius:0; padding-top:0; } }
 </style>
-<link rel="icon" href="./favicon.ico"/></head>
+<link rel="icon" href="./favicon.ico"/><link rel="preload" href="./_expo/static/css/leaflet-df687fead8c4838a4e6b8bcb2f176a0e.css" as="style">
+<link rel="stylesheet" href="./_expo/static/css/leaflet-df687fead8c4838a4e6b8bcb2f176a0e.css"></head>
 <body>
 <div class="stage">
   <div class="phone" id="phone"><div id="root"></div></div>
   <aside class="cues" aria-label="Demo script">
-    <h1>Backup demo · same app, in the browser</h1>
+    <h1>Kuching Trip Advisor · web prototype</h1>
     <h2>4-minute demo script</h2>
+    <div class="step"><div class="n">0</div><b>Set the trip on the map</b><span>Tap the map for A (start) then B (destination), or search a name like "Vivacity". Drag a pin to fine-tune; it names the street.</span></div>
     <div class="step"><div class="n">1</div><b>Normal morning</b><span>Pending → Batu Lintang, arrive 07:30, Tomorrow, School day, 90%. Tap "When should I leave?" Read the leave time and risk; point at "Why this advice".</span></div>
     <div class="step"><div class="n">2</div><b>School day vs holiday</b><span>Stutong → Satok, 07:30. School day vs No school: the leave time moves back by several minutes.</span></div>
     <div class="step"><div class="n">3</div><b>Something goes wrong</b><span>Road reports → Padungan–Pending → Closed. Ask again: new road, earlier leave time, main risk "Road closure". Show "Open in Google Maps".</span></div>
     <div class="step"><div class="n">4</div><b>Outside-Kuching commuter</b><span>Samarahan → City Centre, arrive 08:00. "Traffic from outside Kuching" in the why box; map switches to Greater Kuching.</span></div>
     <div class="step"><div class="n">5</div><b>Act</b><span>Remind me, Send as message (copies the text here), start a test trip → I'm leaving.</span></div>
     <div class="step"><div class="n">6</div><b>Close</b><span>"Runs offline on the phone, under a second per answer. Next: real road map, shared reports, one-week pilot."</span></div>
-    <p class="hint">"My location" pretends you are in Pending (change it in Settings → Demo). Click a step to tick it. <kbd>S</kbd> hides this panel for the audience. Reminders and sharing are phone features; here they show a note instead.</p>
+    <p class="hint">"My location" pretends you are in Pending (change it in Settings → Demo). Click a step to tick it. <kbd>S</kbd> hides this panel for the audience. Reminders and sharing are phone features; here they show a note. The street map needs internet; without it, use the place list.</p>
   </aside>
 </div>
 <script>
@@ -48,6 +50,6 @@
   document.querySelectorAll('.step').forEach(function(el){ el.addEventListener('click', function(){ el.classList.toggle('done'); }); });
   addEventListener('keydown', function(e){ var t=e.target.tagName; if ((e.key==='s'||e.key==='S') && t!=='INPUT' && t!=='TEXTAREA' && !e.target.isContentEditable){ document.body.classList.toggle('clean'); fit(); } });
 </script>
-<script src="./_expo/static/js/web/index-1f113c916c10ffb70bb4ea23c7095d92.js" defer></script>
+<script src="./_expo/static/js/web/index-f462075c00627098b66e25f9b58eb661.js" defer></script>
 </body>
 </html>

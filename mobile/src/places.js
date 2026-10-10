@@ -95,3 +95,14 @@ export const BOUNDS = {
   la0: Math.min(...pts.map(p => p[0])) - 0.01, la1: Math.max(...pts.map(p => p[0])) + 0.01,
   lo0: Math.min(...pts.map(p => p[1])) - 0.01, lo1: Math.max(...pts.map(p => p[1])) + 0.01,
 };
+
+// Street name for a dropped pin (online only). Returns null if it can't be found.
+export async function streetName(ll) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&zoom=17&lat=${ll[0]}&lon=${ll[1]}`;
+  try {
+    const r = await fetch(url, { headers: { "Accept-Language": "en", "User-Agent": "KuchingTripAdvisor/0.1 (hackathon prototype)" } });
+    if (!r.ok) return null;
+    const a = (await r.json()).address || {};
+    return a.road || a.neighbourhood || a.suburb || a.amenity || null;
+  } catch { return null; }
+}
