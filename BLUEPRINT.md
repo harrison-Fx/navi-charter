@@ -77,7 +77,7 @@ This is the honest link between the fleet entry point and the public vision: **t
 
 **Route search check (dense, real-size test grid, ~2,500 junctions):** old method 279/400 vehicles with a choice in 42 s; new method 400/400 in 0.2 s. A full simulated day takes ~3.6 s, so a real-map run of 20 days × 3 seeds takes ~4 minutes.
 
-**Still open:** the real Kuching OSM run with the new code (needs Replit — this workspace cannot reach OpenStreetMap).
+**Still open:** the real Kuching OSM run with the new code (run `RUN-REAL-MAP.bat` on a PC; Claude's workspace cannot reach OpenStreetMap).
 
 
 ## 4b. School traffic (added 10 Oct, 13:15)
@@ -119,7 +119,7 @@ Holding a wave until drop-off ends is a simple dispatcher decision with a large 
 
 | Gate | Do | Pass when (report either way) |
 |---|---|---|
-| 1. Prototype | Run `python kuching_advisor.py --osm` and `--osm --sweep` on Replit; document route availability and changes | Route diagnostics explain choice availability on real roads; paired differences reported with CIs |
+| 1. Prototype | Run `python kuching_advisor.py --osm` and `--osm --sweep` (`RUN-REAL-MAP.bat`); document route availability and changes | Route diagnostics explain choice availability on real roads; paired differences reported with CIs |
 | 2. Data | One courier: consented GPS traces, dispatch and arrival times, promises, notification records, real costs; school session times and calendar | ETA and P(late) calibrated; RM20/RM5 replaced by real figures or shown as ranges |
 | 3. Pilot | Shadow mode first (advice only), then wave-level randomised crossover | On-time, vehicle-minutes, overrides and detour fairness measured against comparable waves |
 | 4. Expansion | Second fleet or one corridor; then the free public app | Road-level travel times and neighbourhood impact measured, not assumed |

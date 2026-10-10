@@ -27,9 +27,6 @@ Manual steps:
 
 **Version note:** this project uses **Expo SDK 57** (latest stable on 10 Oct 2026). Expo Go only opens projects made for the SDK it supports. If Expo Go says the project is incompatible, run `npx expo install expo@latest` then `npx expo install --fix`, and start again.
 
-## On Replit
-Import the `mobile` folder into a Node/Expo Repl, run `npm install`, then `npx expo start --tunnel` and scan the QR code with Expo Go.
-
 ## Make an installable APK
 Double-click `BUILD-APK.bat` (or press *Build an installable APK* in the launcher).
 1. Make a free Expo account at expo.dev/signup; the window asks you to sign in.
@@ -50,5 +47,5 @@ Settings live in `eas.json` (profile `preview` builds an APK). To ship a new ver
 ## Known limits
 - Made-up traffic, approximate areas: advice is worked out between area centres.
 - The extra Maps stop is an area's centre point and can land on a side street; the real-map version should put it on the main road.
-- Road reports and test trips are per phone; sharing needs a small backend (e.g. on Replit).
+- Road reports and test trips are per phone; sharing needs a small backend (e.g. a small hosted server).
 - Exact-time reminders on Android 12+ may arrive a little late without the exact-alarm permission (fine for a prototype).

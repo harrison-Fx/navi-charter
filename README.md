@@ -20,21 +20,23 @@ python kuching_advisor.py                 # approximate map, 400 vehicles, 60 da
 python kuching_advisor.py --sweep --days 30   # fleet size 100-800 x 3 closure locations x 3 seeds (~30 s)
 ```
 
-**Real Kuching roads (Replit — needs internet once):**
+**Real Greater Kuching roads (needs internet once):** on Windows, double-click `RUN-REAL-MAP.bat`. It installs the packages, runs the main, no-outside-traffic, leave-time and noise runs, and zips everything into `real-map-results.zip`. By hand:
 
 ```
-python kuching_advisor.py --osm           # downloads OSM, saves data/kuching_drive.graphml, ~4 min
+python kuching_advisor.py --osm           # downloads OSM, saves data/greater_kuching_drive.graphml
 python kuching_advisor.py --osm --sweep   # slower: allow ~15-30 min
 python kuching_advisor.py --osm --routes=yen   # old route search, reproduces the 1-route finding
 ```
 
-After the first `--osm` run, `data/kuching_drive.graphml` lets later runs (and Claude) work offline. **Please copy that file back into the project folder.**
+After the first `--osm` run, `data/greater_kuching_drive.graphml` lets later runs work offline.
 
-Options: `--days N`, `--seeds N`, `--vehicles N`, `--graph path.graphml`, `--wave HH:MM` (wave start, default 07:00), `--wave-scan` (term-day results for several start times), `--fake-scan` (robustness to fake trip requests), `--priority-scan` (does claiming urgency pay?), `--double-session X` (share of unverified primary schools treated as two-session), `--commuters X` (scale on traffic from outside Kuching; 0 = off).
+Options: `--days N`, `--seeds N`, `--vehicles N`, `--graph path.graphml`, `--wave HH:MM` (wave start, default 07:00), `--wave-scan` (term-day results for several start times), `--fake-scan` (robustness to fake trip requests), `--priority-scan` (does claiming urgency pay?), `--noise-scan` (robustness to day-to-day traffic noise and live-data error), `--double-session X` (share of unverified primary schools treated as two-session), `--commuters X` (scale on traffic from outside Kuching; 0 = off).
 
 School list with session types: `data/kuching_schools_sessions.csv` (sessions unverified — fill them in as sources are found; see BLUEPRINT.md section 11).
 
-The first `--osm` run also downloads school locations to `data/kuching_schools.csv` — copy that back too.
+The first `--osm` run also downloads school locations to `data/kuching_schools.csv`.
+
+Pitch numbers: `python pitch_numbers.py approx` (or `osm`, plus an optional folder) prints the PITCH_PACK table from `results_<tag>.csv`. The main run also saves `calibration_<tag>.png` (predicted vs actual chance of being late).
 
 ## Outputs (tag = `approx`, `osm`, or `osm_yen`)
 

@@ -1,0 +1,11 @@
+knob,noise_sigma,sensor_sigma,scenario,typical_app_on_time,advisor_on_time,advisor_diff,ci,warn_precision,warn_recall,brier
+noise_sigma,0.1,0.1,normal,97.6,97.2,-0.45,0.13,54.1,69.2,0.018
+noise_sigma,0.1,0.1,closure,69.1,69.7,0.59,0.24,90.4,95.4,0.031
+noise_sigma,0.25,0.1,normal,91.1,91.2,0.1,0.2,70.8,78.8,0.033
+noise_sigma,0.25,0.1,closure,63.8,65.4,1.58,0.5,90.5,93.7,0.039
+noise_sigma,0.4,0.1,normal,81.1,81.6,0.54,0.29,82.7,85.9,0.042
+noise_sigma,0.4,0.1,closure,58.2,59.6,1.42,0.47,92.1,94.3,0.04
+sensor_sigma,0.25,0.05,normal,91.5,91.6,0.07,0.18,85.4,87.5,0.016
+sensor_sigma,0.25,0.05,closure,64.2,65.6,1.37,0.47,95.5,96.5,0.019
+sensor_sigma,0.25,0.2,normal,90.1,90.0,-0.03,0.3,50.2,71.1,0.07
+sensor_sigma,0.25,0.2,closure,62.7,64.5,1.87,0.54,80.2,89.4,0.08

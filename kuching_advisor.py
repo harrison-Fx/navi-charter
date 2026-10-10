@@ -749,6 +749,34 @@ def calibration_table(rows):
         if m.sum():
             print(f" {lo:.1f}-{min(hi, 1):.1f}  {m.sum():7d}   {L[m].mean():.0%}")
 
+CAL_BINS = [(0, .1), (.1, .3), (.3, .5), (.5, .7), (.7, .9), (.9, 1.01)]
+
+def plot_calibration(rows, fname, title=""):
+    """Reliability diagram: predicted P(late) (binned) vs the share of those trips that
+    actually arrived late. On the diagonal = honest probabilities. Point size = trips."""
+    names = {"independent": "Typical app", "coordinated": "Our advisor"}
+    fig, ax = plt.subplots(figsize=(6.4, 6))
+    ax.plot([0, 1], [0, 1], ls="--", c="#888", lw=1, label="Perfectly calibrated")
+    for s, col, mk in (("independent", "#C2410C", "s"), ("coordinated", "#2B5FAD", "o")):
+        R = [r for r in rows if r.get("strategy") == s and "_p" in r]
+        if not R:
+            continue
+        P = np.concatenate([r["_p"] for r in R]); L = np.concatenate([r["_late"] for r in R]).astype(float)
+        xs, ys, ns = [], [], []
+        for lo, hi in CAL_BINS:
+            m = (P >= lo) & (P < hi)
+            if m.sum() >= 20:
+                xs.append(P[m].mean()); ys.append(L[m].mean()); ns.append(m.sum())
+        brier = float(np.mean((P - L) ** 2))
+        ax.plot(xs, ys, c=col, lw=1.5, alpha=.8)
+        ax.scatter(xs, ys, s=[20 + 180 * n / max(ns) for n in ns], c=col, marker=mk, zorder=3,
+                   label=f"{names[s]} (Brier {brier:.3f})")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.set_aspect("equal")
+    ax.set_xlabel("Predicted chance of being late"); ax.set_ylabel("Share that actually arrived late")
+    ax.set_title(title or "Are the late warnings honest?", fontsize=11)
+    ax.grid(alpha=.25); ax.legend(loc="upper left", fontsize=9, frameon=False)
+    fig.tight_layout(); fig.savefig(fname, dpi=150); plt.close(fig)
+
 def save_rows(rows, fname):
     keys = [k for k in rows[0] if not k.startswith("_")]
     for r in rows:
@@ -821,6 +849,7 @@ def main():
     ap.add_argument("--commuters", type=float, default=A["commuters"],
                     help="scale on commuter traffic from outside Kuching (0 = off, 1 = assumed levels)")
     ap.add_argument("--fake-scan", action="store_true", help="robustness to fake trip requests (abuse test)")
+    ap.add_argument("--noise-scan", action="store_true", help="robustness to traffic noise and live-data error")
     ap.add_argument("--priority-scan", action="store_true", help="does claiming urgency pay? (priority inflation test)")
     args = ap.parse_args()
     ROUTE_METHOD = args.routes
@@ -844,6 +873,8 @@ def main():
         return fake_scan(G, place, days, args.seeds, args.vehicles, tag)
     if args.priority_scan:
         return priority_scan(G, place, days, args.seeds, args.vehicles, tag)
+    if args.noise_scan:
+        return noise_scan(G, place, days, args.seeds, args.vehicles, tag)
 
     all_rows, diag, inc, sample = [], None, None, None
     for seed in range(1, args.seeds + 1):
@@ -857,7 +888,8 @@ def main():
     save_rows(all_rows, f"results_{tag}.csv")
     save_sample_warnings(sample, f"warnings_{tag}.csv")
     plot_ledger1(all_rows, f"ledger1_{tag}.png", title)
-    print(f"Saved: results_{tag}.csv, warnings_{tag}.csv, ledger1_{tag}.png")
+    plot_calibration(all_rows, f"calibration_{tag}.png", "Are the late warnings honest? " + title.split(",")[0].replace(" (", ", ").rstrip(")") + ", simulated")
+    print(f"Saved: results_{tag}.csv, warnings_{tag}.csv, ledger1_{tag}.png, calibration_{tag}.png")
 
 def sweep(G, place, days, seeds, tag):
     """Fleet size x incident location x seed. Reports the paired coordinated-minus-
@@ -890,6 +922,43 @@ def sweep(G, place, days, seeds, tag):
     save_rows(out, f"sweep_{tag}.csv")
     plot_sweep(out, f"fleet_size_effect_{tag}.png", tag)
     print(f"Saved: sweep_{tag}.csv, fleet_size_effect_{tag}.png")
+
+def noise_scan(G, place, days, seeds, n, tag):
+    """Robustness to noisy data. Varies one at a time (the other stays at its default):
+      noise_sigma  : how much real traffic differs day to day from the usual pattern
+      sensor_sigma : how wrong the live traffic reading is
+    School-term days. Reports on-time (typical app vs our advisor) and warning quality."""
+    base = (A["noise_sigma"], A["sensor_sigma"])
+    grid = [("noise_sigma", x) for x in (0.10, 0.25, 0.40)] + [("sensor_sigma", x) for x in (0.05, 0.20)]
+    out = []
+    for knob, val in grid:
+        A["noise_sigma"], A["sensor_sigma"] = base
+        A[knob] = val
+        rows = []
+        for seed in range(1, seeds + 1):
+            r_, *_ = run(G, place, n, days, seed, verbose=False, daytypes=("term",))
+            rows += r_
+        for sc in ("normal", "closure"):
+            R = [r for r in rows if r["scenario"] == sc]
+            keys = sorted({(r["seed"], r["day"]) for r in R})
+            idx = {(r["seed"], r["day"], r["strategy"]): r for r in R}
+            ind = np.mean([idx[k + ("independent",)]["on_time"] for k in keys])
+            crd = np.mean([idx[k + ("coordinated",)]["on_time"] for k in keys])
+            dc = mean_ci([idx[k + ("coordinated",)]["on_time"] - idx[k + ("independent",)]["on_time"] for k in keys])
+            W = [idx[k + ("coordinated",)] for k in keys]
+            tp, fp, fn = (sum(w.get(x) or 0 for w in W) for x in ("tp", "fp", "fn"))
+            prec = tp / (tp + fp) if tp + fp else float("nan"); rec = tp / (tp + fn) if tp + fn else float("nan")
+            P = np.concatenate([w["_p"] for w in W if "_p" in w]); L = np.concatenate([w["_late"] for w in W if "_late" in w])
+            brier = float(np.mean((P - L) ** 2))
+            out.append(dict(knob=knob, noise_sigma=A["noise_sigma"], sensor_sigma=A["sensor_sigma"], scenario=sc,
+                            typical_app_on_time=round(ind, 1), advisor_on_time=round(crd, 1),
+                            advisor_diff=round(dc[0], 2), ci=round(dc[1], 2),
+                            warn_precision=round(100 * prec, 1), warn_recall=round(100 * rec, 1), brier=round(brier, 3)))
+            print(f"{knob}={val:.2f} {sc:7s} typical app {ind:5.1f}% | advisor {crd:5.1f}% ({dc[0]:+.2f}±{dc[1]:.2f}) | "
+                  f"warnings precision {prec:.0%} recall {rec:.0%} | Brier {brier:.3f}")
+    A["noise_sigma"], A["sensor_sigma"] = base
+    save_rows(out, f"noise_scan_{tag}.csv")
+    print(f"Saved: noise_scan_{tag}.csv")
 
 def wave_scan(G, place, days, seeds, n, tag):
     """Term-day results for waves starting at different clock times: how much does

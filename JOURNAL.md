@@ -121,7 +121,7 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Supports the vision honestly: coordination pays off as more vehicles take part.
 
 ### Open
-- [ ] Run `python kuching_advisor.py --osm` and `--osm --sweep` on Replit; copy `data/kuching_drive.graphml` back to the project folder.
+- [ ] Run the real map: `RUN-REAL-MAP.bat` on Ming's PC (Replit dropped 11 Oct).
 - [ ] Update the report (Claude Doc) to v2 framing and results.
 - [ ] Warnings calibration is overconfident mid-range; needs real trip data (Gate 2).
 
@@ -205,3 +205,11 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Rubric: Track 1, five criteria × 20 (problem & value, rigor & robustness, decision support, explainability, live demo & pitch); Phase 1 = 3-min pitch, Phase 2 = 4-min demo.
 - App: risk level (Low/Medium/High) and ranked "Why this advice" causes (closure, reported jam, school rush, traffic from outside Kuching, crowding, peak traffic).
 - New 6-slide "3-Minute Pitch" deck (timed notes), `PITCH_PACK.md` (rubric map, demo script, Q&A sheet, numbers), `REPLIT_UPDATE_4.md` (real-map runs, calibration chart, noise sweep, pitch-number export, sources to find).
+
+## 11 Oct, 01:30 — Replit dropped; Claude takes over its tasks
+- Ming: no more Replit, all Claude from here. Old Replit briefs moved to `archive/`.
+- Added `plot_calibration()` → `calibration_<tag>.png` (predicted vs actual chance of being late, typical app vs our advisor), `--noise-scan` (traffic noise 0.10/0.25/0.40, live-data error 0.05/0.10/0.20, one at a time), and `pitch_numbers.py` (prints the PITCH_PACK numbers table from any results CSV; checked: reproduces the v7 table exactly).
+- Real-map runs can't happen here (OpenStreetMap blocked): `RUN-REAL-MAP.bat` does them on Ming's PC and zips the results.
+- Approximate-map rerun (`outputs/v9/`): same story as v7, numbers within about 1.5 points (closure: typical app 63.8%, advisor 65.4%, school-safe 66.5%; fixed routes 54.0%). Slides keep the v7 numbers until the real-map run replaces both.
+- Calibration chart: estimates lean cautious in the middle (says 60% → ~45% late), not overconfident as earlier notes said.
+- Noise scan: closure-day gain holds at every noise level (+0.6 to +1.9 pts); warning precision depends on the live traffic reading (85% good / 71% default / 50% poor).

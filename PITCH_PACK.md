@@ -37,10 +37,11 @@ Backup if the phone fails: the web demo page (same engine) on the laptop.
 - **"Why not just use Waze or Google Maps?"** They react to traffic that exists and give everyone the same shortcut. We predict the departure decision and plan with other trips in mind. And we hand off to Google Maps for driving, so users keep their app.
 - **"What if everyone uses it?"** That's the design point: it counts planned trips and spreads them. Our test of "everyone gets the same advice" (random split / typical app) is in the results. Nobody can pay for priority.
 - **"How do you know it works?"** Simulation today (60 days × 3 seeds, paired comparisons with confidence intervals) plus a built-in test log for a one-week field pilot that times every real trip. We report the honest finding: on normal days timing matters most; spreading pays on bad days.
-- **"False alarms?"** On normal days 72% of late warnings are right and 80% of late trips are caught; on closure days 91% / 94%. Brier score 0.03.
+- **"False alarms?"** On normal days 72% of late warnings are right and 80% of late trips are caught; on closure days 91% / 94%. Brier score 0.03. Show `calibration_approx.png`: our estimates lean cautious in the middle (when we say 60%, about 45% are actually late), never the risky way.
+- **"What if the data is noisy?"** Noise scan (`outputs/v9/noise_scan_approx.txt`): on closure days the advisor beats the typical app at every noise level tried (+0.6 to +1.9 points). Warning quality depends on the live traffic reading: precision 85% with a good reading, 71% with our default, 50% with a poor one. That's why live data sources are on the roadmap.
 - **"Privacy?"** No account; saved places stay on the phone; shared plans will carry a throwaway ID (PDPA-friendly).
 - **"Business model?"** Fleets pay for dispatch tools (per van per month); commuters free. Never sell road priority.
-- **"Weaknesses?"** Approximate map until the real-map run; assumed volumes; mid-range probabilities slightly overconfident; school hours unverified. Each has a named fix.
+- **"Weaknesses?"** Approximate map until the real-map run; assumed volumes; mid-range probabilities a bit cautious (over-warn); school hours unverified. Each has a named fix.
 
 ## Numbers used (from `outputs/v7/`, approximate map, simulated)
 
@@ -56,4 +57,16 @@ Backup if the phone fails: the web demo page (same engine) on the laptop.
 
 Wave timing (typical app, school day, normal): 07:00 91.1% → 07:30 96.0%.
 
-Update these from the real-map run when Replit sends it (see `REPLIT_UPDATE_4.md`).
+Noise scan (school days, `outputs/v9/noise_scan_approx.csv`, one setting changed at a time):
+
+| Setting | Advisor vs typical app, closure | Warnings precision / recall, normal | Brier, normal |
+|---|---|---|---|
+| Traffic noise low (0.10) | +0.6 pts | 54% / 69% | 0.018 |
+| Default (0.25 / 0.10) | +1.6 pts | 71% / 79% | 0.033 |
+| Traffic noise high (0.40) | +1.4 pts | 83% / 86% | 0.042 |
+| Live reading good (0.05) | +1.4 pts | 85% / 87% | 0.016 |
+| Live reading poor (0.20) | +1.9 pts | 50% / 71% | 0.070 |
+
+(Low traffic noise means few late trips, so the few warnings are harder to get right: precision drops but Brier improves.)
+
+Update these from the real-map run: double-click `RUN-REAL-MAP.bat`; `outputs/real-map/pitch_numbers_osm.md` then has this table filled in.
