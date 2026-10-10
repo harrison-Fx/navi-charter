@@ -7,7 +7,7 @@ Decks:
 - **3-minute pitch** (6 slides, timed speaker notes): "Kuching Trip Advisor 3-Minute Pitch" artifact.
 - Backup for Q&A: the 10-slide "Kuching Trip Advisor Pitch" (Expo) or "(Flutter)" copy.
 
-Before presenting, fill in: price placeholder on the proof slide (or delete it), team/contact/QR on the last slide.
+Before presenting, fill in: price placeholder on the proof slide (or delete it), team/contact on the last slide, and turn on GitHub Pages so the last slide's QR (harrison-fx.github.io/navi-charter) opens.
 
 ## How each criterion is covered
 
@@ -17,20 +17,20 @@ Before presenting, fill in: price placeholder on the proof slide (or delete it),
 | 2 Rigor & robustness | Slide 4 | BPR volume-delay + Monte Carlo + congestion-aware assignment; tested against noise, sensor error, closures, unconfirmed school hours, fake trips, false urgency; warnings 80% recall / 72% precision (normal), 94% / 91% (closures), Brier 0.03. Paired comparisons with 95% CIs. |
 | 3 Decision support | Slide 3 + demo | Predict → explain → act. Risk level (Low/Medium/High), ranked main cause, then actions: open Maps, reminder, message. Fleets: early customer notice. |
 | 4 Explainability | Slide 3 + demo | "Why this advice" box: plain-language main risk (school rush, traffic from outside Kuching, closure, crowding, peak traffic). |
-| 5 Live demo & pitch | Slide 6 + demo | Android APK runs offline (engine on the phone): venue Wi-Fi can't break it. 3:00 timing in the notes. |
+| 5 Live demo & pitch | Slide 6 + demo | Web prototype in any browser (judges scan the QR on slide 6); laptop runs it from the folder if Wi-Fi fails. 3:00 timing in the notes. |
 
-## Phase 2: 4-minute demo script (APK on phone, screen mirrored)
+## Phase 2: 4-minute demo script (web prototype on the laptop, projected; `START-WEB-DEMO.bat`, press S to hide the cue card)
 
-1. **0:00 Normal morning (45 s).** Pending → Batu Lintang, arrive 07:30, tomorrow, school day, 90%. Tap *When should I leave?* Read out: leave 07:13, Low risk 8%, arrive 07:22–07:29. Point at **Why this advice: school rush near Batu Lintang ~07:19.**
+1. **0:00 Normal morning (45 s).** Type *Pending* → *Batu Lintang* (or tap the map for A and B), tap 07:30, Tomorrow, School day, 90%. Tap *When should I leave?* Read out: leave 07:13, Low risk 8%, the timeline: most likely 07:25, 5 minutes to spare. Point at **Why this advice: school rush** and the school-zone flag on Padungan–Batu Lintang ~07:19.
 2. **0:45 School day vs holiday (30 s).** Change the trip to Stutong → Satok (arrive 07:30): school day says leave 07:07 with two school zones; switch to *No school* and it says 07:14, school notes gone. "Seven minutes back, because we know the school timetable."
 3. **1:15 Something goes wrong (60 s).** Road reports → Padungan–Pending → *Closed / accident*. Ask again: route switches to Kenyalang → Simpang Tiga, earlier leave time, main risk now "Road closure". Show *Open in Google Maps*: the link carries a stop so Maps follows our road.
 4. **2:15 Outside-Kuching commuter (40 s).** From Samarahan → City Centre, arrive 08:00. Why box: traffic from outside Kuching on Stutong → Simpang Tiga. Map switches to Greater Kuching.
-5. **2:55 Act (35 s).** *Remind me* (notification), *Send as message* (WhatsApp text for a parent). Start a test trip → *I'm leaving* → shows how we measure real results.
-6. **3:30 Close (30 s).** "All offline, under a second per answer. Next: real road map, shared reports, one-week pilot."
+5. **2:55 Act (35 s).** *Open in Google Maps*, *Remind me* (on the phone it's a notification), *Send as message* (copies a WhatsApp-ready text). Optional: type "hospital near Petra Jaya" in To to show it reads context. For testers → log the trip shows how we measure real results.
+6. **3:30 Close (30 s).** "Runs in any browser, under a second per answer; scan the QR to try it. Next: real road map, shared reports, one-week pilot."
 
 Finding places (if asked): type a name ("Vivacity", "UNIMAS"), add a road or landmark to narrow it, or drop and drag a pin. Indoors, Settings → Demo makes "My location" pretend to be in Pending, Samarahan, etc.
 
-Backup if the phone fails: `mobile/START-WEB-DEMO.bat` on the laptop. It is the same app (same screens, same engine) in a phone frame, offline, with this script as a cue card (press **S** to hide it, F11 for full screen). Reminders show a note and "Send as message" copies the text instead. Online copy: the "Trip Advisor Demo" artifact. Rebuild after app changes: `cd mobile && npm run web-demo`.
+Backup if Wi-Fi fails: `mobile/START-WEB-DEMO.bat` on the laptop. It is the same app (same screens, same engine) in a phone frame, offline, with this script as a cue card (press **S** to hide it, F11 for full screen). Reminders show a note and "Send as message" copies the text instead. Online copy: the "Trip Advisor Demo" artifact. Rebuild after app changes: `cd mobile && npm run web-demo`.
 
 ## Q&A cheat sheet
 
