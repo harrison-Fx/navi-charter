@@ -1,0 +1,511 @@
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, TextInput, Switch, Modal, FlatList, Linking, Share, Alert, ActivityIndicator, useColorScheme, useWindowDimensions, Platform, StyleSheet } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
+import RouteMap from "./src/RouteMap";
+
+// ---------------------------------------------------------------- look
+const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
+const DARK = { bg: "#151815", surface: "#1F231F", sunk: "#2A2F2A", line: "#373D37", fg: "#E8EBE6", muted: "#A3AA9F", accent: "#78A6EC", accentInk: "#0E1A2C", accentSoft: "#1E2D45", school: "#F0A050", schoolSoft: "#3A2814", slow: "#F07B7B", slowSoft: "#3D1D1D", ok: "#6FCB94", okSoft: "#173326", road: "#454C44" };
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+});
+
+// ---------------------------------------------------------------- storage (all on this phone; no accounts)
+const load = async (k, d) => { try { const v = await AsyncStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const save = (k, v) => AsyncStorage.setItem(k, JSON.stringify(v)).catch(() => {});
+const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const dateFor = (dayOffset, minutes) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + dayOffset); d.setMinutes(minutes); return d; };
+const isWeekend = off => { const d = dateFor(off, 0).getDay(); return d === 0 || d === 6; };
+const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const minOf = iso => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+const REPORT_MS = 2 * 3600e3;
+
+export default function App() {
+  return <SafeAreaProvider><Main /></SafeAreaProvider>;
+}
+
+function Main() {
+  const dark = useColorScheme() === "dark";
+  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning" });
+  const [places, setPlaces] = useState([]);
+  const [trips, setTrips] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [tab, setTab] = useState("plan");
+  const [ready, setReady] = useState(false);
+  const c = dark ? DARK : LIGHT;
+  const f = settings.big ? 1.25 : 1;
+  const s = useMemo(() => makeStyles(c, f), [dark, f]);
+
+  useEffect(() => { (async () => {
+    setSettings(await load("settings", settings)); setPlaces(await load("places", [])); setTrips(await load("trips", []));
+    setReports((await load("reports", [])).filter(r => r.expires > Date.now())); setReady(true);
+    if (Platform.OS === "android") Notifications.setNotificationChannelAsync("leave", { name: "Time to leave", importance: Notifications.AndroidImportance.HIGH }).catch(() => {});
+  })(); }, []);
+  const upd = (k, v) => { const n = { ...settings, [k]: v }; setSettings(n); save("settings", n); };
+  const setPl = v => { setPlaces(v); save("places", v); };
+  const setTr = v => { setTrips(v); save("trips", v); };
+  const setRe = v => { setReports(v); save("reports", v); };
+
+  if (!ready) return <View style={[s.fill, { justifyContent: "center" }]}><ActivityIndicator color={c.accent} /></View>;
+  return (
+    <SafeAreaView style={s.fill} edges={["top", "bottom"]}>
+      <StatusBar style={dark ? "light" : "dark"} />
+      <View style={s.header}><Text style={s.title}>Kuching Trip Advisor</Text><Text style={s.badge}>Practice version · made-up traffic</Text></View>
+      <View style={{ flex: 1 }}>
+        {tab === "plan" && <PlanScreen {...{ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest: () => setTab("test") }} />}
+        {tab === "test" && <TestScreen {...{ s, c, trips, setTr, settings }} />}
+        {tab === "settings" && <SettingsScreen {...{ s, c, settings, upd, places, setPl }} />}
+      </View>
+      <View style={s.tabs}>
+        {[["plan", "Plan"], ["test", "Test trips"], ["settings", "Settings"]].map(([k, l]) => (
+          <Pressable key={k} onPress={() => setTab(k)} style={s.tab} accessibilityRole="tab" accessibilityState={{ selected: tab === k }}>
+            <View style={[s.tabDot, tab === k && { backgroundColor: c.accent }]} />
+            <Text style={[s.tabText, tab === k && { color: c.accent, fontWeight: "700" }]}>{l}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------- plan
+function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest }) {
+  const { width } = useWindowDimensions();
+  const [from, setFrom] = useState({ kind: "area", node: "Pending", label: "Pending" });
+  const [to, setTo] = useState({ kind: "area", node: "Batu Lintang", label: "Batu Lintang" });
+  const [arrive, setArrive] = useState(450);
+  const [dayOff, setDayOff] = useState(nowMin() > 600 ? 1 : 0);
+  const [school, setSchool] = useState(!isWeekend(nowMin() > 600 ? 1 : 0));
+  const [conf, setConf] = useState(.9);
+  const [picker, setPicker] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+
+  useEffect(() => { setSchool(!isWeekend(dayOff)); }, [dayOff]);
+  useEffect(() => { setRes(null); }, [from, to, arrive, dayOff, school, conf, reports, settings.commOn, settings.vansOn, settings.sess]);
+
+  const useMyLocation = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") { Alert.alert("Location is off", "Allow location for this app, or pick the area you're starting from."); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const ll = [pos.coords.latitude, pos.coords.longitude]; const n = nearest(ll);
+      if (n.km > 15) Alert.alert("Outside the covered area", `You're about ${Math.round(n.km)} km from the nearest area this app knows (${n.name}). Advice will start from ${n.name}.`);
+      setFrom({ kind: "here", node: n.name, ll, label: "My location", note: `near ${n.name}, ${n.km < 1 ? "under 1" : n.km.toFixed(1)} km away` });
+    } catch (e) { Alert.alert("Couldn't get your location", "Check that location is turned on, then try again. You can also pick an area."); }
+    finally { setLocating(false); }
+  };
+
+  const active = reports.filter(r => r.expires > Date.now());
+  const run = () => {
+    setBusy(true);
+    setTimeout(() => {
+      const r = advise({ from: from.node, to: to.node, arriveBy: arrive, conf, day: school ? "term" : "holiday", sess: settings.sess, commOn: settings.commOn, vansOn: settings.vansOn, closed: active.filter(x => x.kind === "closed").map(x => x.road), slow: active.filter(x => x.kind === "jam").map(x => x.road) });
+      setRes(r); setBusy(false);
+    }, 30);
+  };
+  const link = res && !res.err ? mapsLink(res, from.ll, to.ll, from.kind === "here") : null;
+  const msg = res && !res.err ? message(res, from.kind === "here" ? "" : from.label, to.label) : "";
+
+  const remind = async () => {
+    const when = dateFor(dayOff, res.best.leave - 5);
+    if (when.getTime() < Date.now()) { Alert.alert("Too late for a reminder", `Leave-by time ${hm(res.best.leave)} is less than 5 minutes away or already passed.`); return; }
+    try {
+      let { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
+      if (status !== "granted") { Alert.alert("Notifications are off", "Allow notifications for this app to get a reminder."); return; }
+      await Notifications.scheduleNotificationAsync({
+        content: { title: `Leave in 5 minutes (${hm(res.best.leave)})`, body: `To reach ${to.label} by ${hm(arrive)}. Go via ${res.best.via.join(", ") || "the direct road"}.` },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId: "leave" },
+      });
+      Alert.alert("Reminder set", `We'll remind you at ${hm(res.best.leave - 5)}${dayOff ? " tomorrow" : ""}.`);
+    } catch (e) { Alert.alert("Couldn't set the reminder", String(e?.message || e)); }
+  };
+
+  const startTest = mode => {
+    const b = res.best;
+    const t = { id: String(Date.now()), tester: settings.nick || "me", date: ymd(dateFor(dayOff, 0)), from: from.label, fromNode: from.node, to: to.label, toNode: to.node, arriveBy: hm(arrive), school, mode,
+      plan: { leave: hm(b.leave), via: b.via.join(" → ") || "direct", pLate: Math.round(b.pLate * 100), etaLo: hm(b.lo), etaMid: hm(b.mid), etaHi: hm(b.hi), stop: link.stop || "", url: link.url, plain: link.plain },
+      left: null, arrived: null, mapsKept: null, notes: "" };
+    setTr([t, ...trips]); goTest();
+  };
+
+  const b = res && !res.err ? res.best : null;
+  const pl = b ? Math.round(b.pLate * 100) : 0;
+  const risk = pl <= 10 ? ["Low risk", "ok"] : pl <= 25 ? ["Medium risk", "warn"] : ["High risk", "bad"];
+  const causes = b ? riskCauses(b, active) : [];
+  return (
+    <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+      <View style={s.card}>
+        <Text style={s.label}>From</Text>
+        <View style={s.row}>
+          <Btn s={s} kind={from.kind === "here" ? "solid" : "ghost"} onPress={useMyLocation} label={locating ? "Finding you…" : "My location"} />
+          <Pressable style={[s.select, { flex: 1 }]} onPress={() => setPicker("from")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{from.label}</Text><Text style={s.chev}>▾</Text></Pressable>
+        </View>
+        {from.note ? <Text style={s.hint}>{from.note}. Google Maps uses your exact position.</Text> : null}
+        <Text style={[s.label, { marginTop: 12 }]}>To</Text>
+        <Pressable style={s.select} onPress={() => setPicker("to")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{to.label}</Text><Text style={s.chev}>▾</Text></Pressable>
+
+        <Text style={[s.label, { marginTop: 12 }]}>Arrive by</Text>
+        <View style={[s.row, { alignItems: "center" }]}>
+          <Btn s={s} kind="ghost" small label="−15" onPress={() => setArrive((arrive - 15 + 1440) % 1440)} />
+          <Btn s={s} kind="ghost" small label="−5" onPress={() => setArrive((arrive - 5 + 1440) % 1440)} />
+          <Text style={s.timeBig} accessibilityLabel={`Arrive by ${hm(arrive)}`}>{hm(arrive)}</Text>
+          <Btn s={s} kind="ghost" small label="+5" onPress={() => setArrive((arrive + 5) % 1440)} />
+          <Btn s={s} kind="ghost" small label="+15" onPress={() => setArrive((arrive + 15) % 1440)} />
+        </View>
+        <View style={[s.row, { marginTop: 8 }]}>
+          <Seg s={s} value={dayOff} onChange={setDayOff} options={[[0, "Today"], [1, "Tomorrow"]]} />
+          <Seg s={s} value={school} onChange={setSchool} options={[[true, "School day"], [false, "No school"]]} />
+        </View>
+        <Text style={[s.label, { marginTop: 12 }]}>How sure do you want to be?</Text>
+        <Seg s={s} value={conf} onChange={setConf} options={[[.8, "80%"], [.9, "90%"], [.95, "95%"]]} />
+        <View style={{ marginTop: 14 }}><Btn s={s} kind="solid" label={busy ? "Working it out…" : "When should I leave?"} onPress={run} /></View>
+        {active.length > 0 && <Text style={[s.hint, { marginTop: 8 }]}>{active.length} road report{active.length > 1 ? "s" : ""} included.</Text>}
+      </View>
+
+      {res?.err && <View style={s.card}><Text style={s.body}>{res.err}</Text></View>}
+      {b && (
+        <View style={s.card}>
+          <View style={[s.row, { alignItems: "baseline", flexWrap: "wrap" }]}>
+            <Text style={s.cap}>LEAVE BY</Text>
+            <Text style={s.leave}>{hm(b.leave)}</Text>
+            <Pill s={s} c={c} tone={risk[1]} text={`${risk[0]} · ${pl}% chance of being late`} />
+          </View>
+          <Text style={s.via}>{[from.label, ...b.via, to.label].join(" → ")}</Text>
+          <View style={[s.row, { marginTop: 10 }]}>
+            <Fact s={s} k="Arrive between" v={`${hm(b.lo)}–${hm(b.hi)}`} />
+            <Fact s={s} k="Most likely" v={hm(b.mid)} />
+            <Fact s={s} k="Distance" v={`${b.km.toFixed(1)} km`} />
+          </View>
+          {causes.length > 0 && (
+            <View style={[s.whyBox, { borderColor: c.line }]}>
+              <Text style={s.label}>Why this advice</Text>
+              <Text style={s.body}><Text style={{ fontWeight: "700" }}>Main risk: {causes[0].label}.</Text> {causes[0].detail}</Text>
+              {causes.length > 1 && <Text style={s.hint}>Also: {causes.slice(1).map(x => x.label.toLowerCase()).join(", ")}.</Text>}
+            </View>
+          )}
+          <View style={s.notes}>
+            {!b.ok && <Note s={s} c={c.slow} t={`Even leaving at ${hm(b.leave)} doesn't reach ${Math.round(conf * 100)}% sure. Leave as early as you can.`} />}
+            {[...new Map(b.schools.map(x => [x.c, x])).values()].map(x => <Note key={"s" + x.c} s={s} c={c.school} t={`${x.road}: school drop-off or pick-up when you pass (~${hm(x.at)}). School hours not confirmed yet.`} />)}
+            {active.filter(r => r.kind === "closed").map(r => <Note key={"r" + r.id} s={s} c={c.slow} t={`Avoiding ${roadName(r.road)} (you reported it closed).`} />)}
+            {b.busy.filter(x => x.vc > .85).map(x => <Note key={"b" + x.c} s={s} c={c.slow} t={`${x.road} is busy (${Math.round(x.vc * 100)}% full) when you pass${x.reportedJam ? ", reported jam" : ""}${x.outsideShare > .3 && x.outsideFrom ? `, about ${Math.round(x.outsideShare * 100)}% of it people driving in from ${x.outsideFrom} and other areas around Kuching` : ""}.`} />)}
+            {b.vans > 0 && <Note s={s} c={c.accent} t={`${b.vans} other planned trips use a road on this route around your time.`} />}
+            {!b.schools.length && school && <Note s={s} c={c.ok} t="No school drop-off or pick-up on this route at your time." />}
+          </View>
+          <RouteMap res={res} colors={c} width={Math.min(width - 64, 520)} />
+          <View style={{ gap: 8, marginTop: 10 }}>
+            <Btn s={s} kind="solid" label="Open in Google Maps" onPress={() => Linking.openURL(link.url)} />
+            {link.stop ? <Btn s={s} kind="ghost" label="Open without the extra stop" onPress={() => Linking.openURL(link.plain)} /> : null}
+            <View style={s.row}>
+              <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Remind me" onPress={remind} /></View>
+              <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Send as message" onPress={() => Share.share({ message: msg }).catch(() => {})} /></View>
+            </View>
+          </View>
+          <Text style={[s.hint, { marginTop: 8 }]}>
+            {link.stop ? `This way lets you leave ${res.gain || "a few"} min later than the usual road, so the link adds a stop at ${link.stop} to make Google Maps follow it. If Maps turns into a side street there, use the link without the stop.` : res.keptUsual ? "Another way was only slightly quicker, so we kept the usual road. Google Maps picks the exact streets." : "This is the usual road, so there's no extra stop. Google Maps picks the exact streets."}
+            {` We tried the trip many times with different made-up traffic; 8 in 10 tries arrived in the range shown.`}
+          </Text>
+          <Text style={[s.label, { marginTop: 14 }]}>Testing? Start a test trip</Text>
+          <View style={s.row}>
+            <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Following advice" onPress={() => startTest("follow")} /></View>
+            <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="My usual way" onPress={() => startTest("usual")} /></View>
+          </View>
+        </View>
+      )}
+
+      {b && (
+        <View style={s.card}>
+          <Text style={s.h2}>Other ways to go</Text>
+          {res.routes.map((r, i) => (
+            <View key={i} style={[s.listRow, r === b && { backgroundColor: c.accentSoft }]}>
+              <Text style={[s.body, { flex: 1 }]}>{r.via.join(" → ") || "Direct"}{r === b ? "  · advised" : ""}</Text>
+              <Text style={s.mono}>{r.ok ? hm(r.leave) : "—"} · {Math.round(r.typical)} min · {Math.round(r.pLate * 100)}%</Text>
+            </View>
+          ))}
+          <Text style={s.hint}>Leave-by time · usual drive · chance late. Spreading people over different roads stops everyone piling onto the same "fast" one.</Text>
+        </View>
+      )}
+
+      <View style={s.card}>
+        <Pressable onPress={() => setShowReport(!showReport)} accessibilityRole="button"><Text style={s.h2}>Road reports {active.length ? `(${active.length})` : ""} {showReport ? "▴" : "▾"}</Text></Pressable>
+        {showReport && <ReportBox {...{ s, c, active, reports, setRe }} />}
+      </View>
+
+      <PlacePicker visible={!!picker} s={s} c={c} places={places} allowHere={picker === "from"}
+        onClose={() => setPicker(null)}
+        onHere={() => { setPicker(null); useMyLocation(); }}
+        onPick={p => { (picker === "from" ? setFrom : setTo)(p); setPicker(null); }} />
+    </ScrollView>
+  );
+}
+// Ranks what is driving the risk on the advised route, so the advice explains itself.
+function riskCauses(b, reports) {
+  const out = [];
+  const closed = reports.filter(r => r.kind === "closed");
+  if (closed.length) out.push({ w: 100, label: "Road closure", detail: `Avoiding ${closed.map(r => roadName(r.road)).join(", ")}, which was reported closed.` });
+  const jam = b.busy.filter(x => x.reportedJam);
+  if (jam.length) out.push({ w: 90, label: "Reported jam", detail: `${jam[0].road} has a reported jam; it's included in the times.` });
+  if (b.schools.length) { const x = b.schools[0]; out.push({ w: 60 + 10 * b.schools.length, label: "School rush", detail: `You pass ${x.road} around ${hm(x.at)}, during school drop-off or pick-up.` }); }
+  const inflow = b.busy.filter(x => x.outsideShare > .3 && x.vc > .85).sort((p, q) => q.outsideShare - p.outsideShare);
+  if (inflow.length) { const x = inflow[0]; out.push({ w: 50 + 40 * x.outsideShare, label: "Traffic from outside Kuching", detail: `${x.road} is ${Math.round(x.vc * 100)}% full, about ${Math.round(x.outsideShare * 100)}% of it people driving in from ${x.outsideFrom || "nearby areas"}.` }); }
+  if (b.vans >= 50) out.push({ w: 40, label: "Crowded by other planned trips", detail: `${b.vans} other planned trips use this route around your time.` });
+  const busy = b.busy.filter(x => x.vc > .85 && !(x.outsideShare > .3));
+  if (busy.length) { const x = busy.sort((p, q) => q.vc - p.vc)[0]; out.push({ w: 30 + 10 * x.vc, label: "Peak-hour traffic", detail: `${x.road} is ${Math.round(x.vc * 100)}% full when you pass.` }); }
+  return out.sort((p, q) => q.w - p.w);
+}
+const roadName = i => ROADS[i] ? ROADS[i].a + "–" + ROADS[i].b : "?";
+
+function ReportBox({ s, c, active, reports, setRe }) {
+  const [road, setRoad] = useState(null);
+  const [pick, setPick] = useState(false);
+  const add = kind => { if (road === null) { Alert.alert("Pick a road first"); return; } setRe([...reports.filter(r => r.expires > Date.now()), { id: String(Date.now()), road, kind, at: Date.now(), expires: Date.now() + REPORT_MS }]); setRoad(null); };
+  return (
+    <View style={{ gap: 8, marginTop: 8 }}>
+      <Pressable style={s.select} onPress={() => setPick(true)}><Text style={s.selectText}>{road === null ? "Pick a road" : roadName(road)}</Text><Text style={s.chev}>▾</Text></Pressable>
+      <View style={s.row}>
+        <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Closed / accident" onPress={() => add("closed")} /></View>
+        <View style={{ flex: 1 }}><Btn s={s} kind="ghost" label="Heavy jam" onPress={() => add("jam")} /></View>
+      </View>
+      {active.map(r => (
+        <View key={r.id} style={s.listRow}>
+          <Text style={[s.body, { flex: 1 }]}>{r.kind === "closed" ? "Closed" : "Jam"}: {roadName(r.road)} · {hm(new Date(r.at).getHours() * 60 + new Date(r.at).getMinutes())}</Text>
+          <Pressable onPress={() => setRe(reports.filter(x => x.id !== r.id))}><Text style={s.link}>Clear</Text></Pressable>
+        </View>
+      ))}
+      <Text style={s.hint}>Reports last 2 hours and stay on this phone for now. In the full version they're shared with everyone and also come from official notices and traffic feeds.</Text>
+      <Modal visible={pick} animationType="slide" onRequestClose={() => setPick(false)}>
+        <SafeAreaView style={s.fill}>
+          <View style={s.modalHead}><Text style={s.h2}>Which road?</Text><Pressable onPress={() => setPick(false)}><Text style={s.link}>Close</Text></Pressable></View>
+          <FlatList data={ROADS.map((r, i) => ({ i, name: r.a + "–" + r.b })).sort((a, b) => a.name.localeCompare(b.name))} keyExtractor={x => String(x.i)}
+            renderItem={({ item }) => <Pressable style={s.pickRow} onPress={() => { setRoad(item.i); setPick(false); }}><Text style={s.body}>{item.name}</Text></Pressable>} />
+        </SafeAreaView>
+      </Modal>
+    </View>
+  );
+}
+
+function PlacePicker({ visible, s, c, places, allowHere, onClose, onPick, onHere }) {
+  const sections = [
+    ...(places.length ? [{ title: "Saved places", items: places.map(p => ({ kind: "saved", node: nearest(p.ll).name, ll: p.ll, label: p.name, note: `near ${nearest(p.ll).name}` })) }] : []),
+    { title: "Kuching areas", items: Object.keys(AREAS).map(n => ({ kind: "area", node: n, label: n })) },
+    { title: "Around Kuching", items: Object.keys(EXT).map(n => ({ kind: "area", node: n, label: n })) },
+  ];
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={s.fill}>
+        <View style={s.modalHead}><Text style={s.h2}>Choose a place</Text><Pressable onPress={onClose}><Text style={s.link}>Close</Text></Pressable></View>
+        <ScrollView>
+          {allowHere && <Pressable style={s.pickRow} onPress={onHere}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>My current location</Text></Pressable>}
+          {sections.map(sec => (
+            <View key={sec.title}>
+              <Text style={s.sectionHead}>{sec.title}</Text>
+              {sec.items.map(it => <Pressable key={sec.title + it.label} style={s.pickRow} onPress={() => onPick(it)}><Text style={s.body}>{it.label}</Text>{it.note ? <Text style={s.hint}>{it.note}</Text> : null}</Pressable>)}
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- test trips
+function TestScreen({ s, c, trips, setTr }) {
+  const open = trips.filter(t => !t.done);
+  const done = trips.filter(t => t.done && t.left && t.arrived);
+  const patch = (id, p) => setTr(trips.map(t => t.id === id ? { ...t, ...p } : t));
+  const onTime = a => a.length ? Math.round(100 * a.filter(t => minOf(t.arrived) <= toMin(t.arriveBy)).length / a.length) + "%" : "—";
+  const err = t => minOf(t.arrived) - (minOf(t.left) + toMin(t.plan.etaMid) - toMin(t.plan.leave));
+  const errs = done.map(t => Math.abs(err(t))).sort((a, b) => a - b);
+  const withStop = trips.filter(t => ["yes", "detour", "no"].includes(t.mapsKept));
+  const exportCsv = () => {
+    const head = "date,tester,from,to,mode,arrive_by,advised_leave,predicted_arrival,range,left,arrived,error_min,on_time,maps_kept_route,notes";
+    const rows = trips.filter(t => t.done).map(t => [t.date, t.tester, t.from, t.to, t.mode, t.arriveBy, t.plan.leave, t.plan.etaMid, `${t.plan.etaLo}-${t.plan.etaHi}`, t.left ? hm(minOf(t.left)) : "", t.arrived ? hm(minOf(t.arrived)) : "", t.left && t.arrived ? err(t) : "", t.arrived ? (minOf(t.arrived) <= toMin(t.arriveBy) ? "yes" : "no") : "", t.mapsKept || "", (t.notes || "").replace(/[\n,]/g, " ")].join(","));
+    Share.share({ message: [head, ...rows].join("\n") }).catch(() => {});
+  };
+  return (
+    <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+      <View style={s.statsRow}>
+        <Stat s={s} k="Trips done" v={String(done.length)} sub={`${open.length} open`} />
+        <Stat s={s} k="On time" v={`${onTime(done.filter(t => t.mode === "follow"))} / ${onTime(done.filter(t => t.mode === "usual"))}`} sub="advice / usual way" />
+        <Stat s={s} k="Time error" v={errs.length ? errs[Math.floor(errs.length / 2)] + " min" : "—"} sub="typical, from when you left" />
+        <Stat s={s} k="Maps kept route" v={withStop.length ? Math.round(100 * withStop.filter(t => t.mapsKept === "yes").length / withStop.length) + "%" : "—"} sub={`${withStop.filter(t => t.mapsKept === "detour").length} odd detours`} />
+      </View>
+      {!trips.length && <View style={s.card}><Text style={s.h2}>How the test works</Text><Text style={s.body}>For about a week, swap days: one day follow the advice, the next drive your usual way. Plan the trip, press "Following advice" or "My usual way", then tap "I'm leaving" and "I've arrived" here. The app records the times for you.</Text></View>}
+      {open.map(t => <OpenTrip key={t.id} {...{ s, c, t, patch, remove: () => setTr(trips.filter(x => x.id !== t.id)) }} />)}
+      {done.length > 0 && (
+        <View style={s.card}>
+          <Text style={s.h2}>Finished trips</Text>
+          {done.map(t => (
+            <View key={t.id} style={s.listRow}>
+              <View style={{ flex: 1 }}><Text style={s.body}>{t.date} · {t.from} → {t.to}</Text><Text style={s.hint}>{t.mode === "follow" ? "Followed advice" : "Usual way"} · left {hm(minOf(t.left))} · arrived {hm(minOf(t.arrived))} (predicted {t.plan.etaMid})</Text></View>
+              <Pill s={s} c={c} tone={minOf(t.arrived) <= toMin(t.arriveBy) ? "ok" : "bad"} text={minOf(t.arrived) <= toMin(t.arriveBy) ? "On time" : "Late"} />
+            </View>
+          ))}
+          <View style={{ marginTop: 10 }}><Btn s={s} kind="ghost" label="Send results (CSV)" onPress={exportCsv} /></View>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+const toMin = x => { const [h, m] = String(x).split(":").map(Number); return h * 60 + m; };
+
+function OpenTrip({ s, c, t, patch, remove }) {
+  const [notes, setNotes] = useState(t.notes || "");
+  const leaveNow = async () => { patch(t.id, { left: new Date().toISOString() }); if (t.mode === "follow") Linking.openURL(t.plan.url).catch(() => {}); };
+  return (
+    <View style={s.card}>
+      <View style={[s.row, { justifyContent: "space-between", flexWrap: "wrap" }]}>
+        <Text style={s.h2}>{t.from} → {t.to}</Text>
+        <Pill s={s} c={c} tone={t.mode === "follow" ? "info" : "warn"} text={t.mode === "follow" ? "Following advice" : "Usual way"} />
+      </View>
+      <Text style={s.hint}>{t.date} · arrive by {t.arriveBy} · advised: leave {t.plan.leave}, arrive {t.plan.etaLo}–{t.plan.etaHi} via {t.plan.via}</Text>
+      {!t.left && <View style={{ marginTop: 10 }}><Btn s={s} kind="solid" label={t.mode === "follow" ? "I'm leaving (opens Google Maps)" : "I'm leaving now"} onPress={leaveNow} /></View>}
+      {t.left && !t.arrived && <View style={{ marginTop: 10, gap: 6 }}><Text style={s.body}>Left at {hm(minOf(t.left))}. Drive safely.</Text><Btn s={s} kind="solid" label="I've arrived" onPress={() => patch(t.id, { arrived: new Date().toISOString() })} /></View>}
+      {t.left && t.arrived && (
+        <View style={{ marginTop: 10, gap: 8 }}>
+          <Text style={s.body}>Left {hm(minOf(t.left))}, arrived {hm(minOf(t.arrived))}.</Text>
+          {t.mode === "follow" && <>
+            <Text style={s.label}>Did Google Maps keep our route?</Text>
+            <View style={[s.row, { flexWrap: "wrap" }]}>
+              {[["yes", "Yes"], ["detour", "Odd detour"], ["no", "Dropped it"], ["none", "No stop in link"], ["notused", "Didn't use Maps"]].map(([k, l]) => <Btn key={k} s={s} small kind={t.mapsKept === k ? "solid" : "ghost"} label={l} onPress={() => patch(t.id, { mapsKept: k })} />)}
+            </View>
+          </>}
+          <TextInput style={s.input} placeholder="Notes: roads you took, jams, anything odd" placeholderTextColor={c.muted} value={notes} onChangeText={setNotes} multiline />
+          <Btn s={s} kind="solid" label="Save trip" onPress={() => patch(t.id, { notes, done: true })} />
+        </View>
+      )}
+      <Pressable onPress={() => Alert.alert("Remove this trip?", "", [{ text: "Keep" }, { text: "Remove", style: "destructive", onPress: remove }])} style={{ marginTop: 10 }}><Text style={[s.link, { color: c.slow }]}>Remove trip</Text></Pressable>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------- settings
+function SettingsScreen({ s, c, settings, upd, places, setPl }) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const saveHere = async () => {
+    if (!name.trim()) { Alert.alert("Give the place a name first", "For example Home, Office or Mum's house."); return; }
+    setBusy(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") { Alert.alert("Location is off", "Allow location to save where you are."); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setPl([...places, { name: name.trim(), ll: [pos.coords.latitude, pos.coords.longitude] }]); setName("");
+    } catch { Alert.alert("Couldn't get your location", "Try again outdoors or with location turned on."); }
+    finally { setBusy(false); }
+  };
+  return (
+    <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+      <View style={s.card}>
+        <Text style={s.h2}>You</Text>
+        <Text style={s.label}>Nickname for test trips</Text>
+        <TextInput style={s.input} value={settings.nick} onChangeText={v => upd("nick", v.slice(0, 24))} placeholder="e.g. Ming" placeholderTextColor={c.muted} />
+        <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>Large text</Text><Switch value={settings.big} onValueChange={v => upd("big", v)} /></View>
+        <Text style={s.hint}>No account needed. Everything here stays on this phone.</Text>
+      </View>
+      <View style={s.card}>
+        <Text style={s.h2}>Saved places</Text>
+        {places.map((p, i) => (
+          <View key={i} style={s.listRow}>
+            <View style={{ flex: 1 }}><Text style={s.body}>{p.name}</Text><Text style={s.hint}>near {nearest(p.ll).name}</Text></View>
+            <Pressable onPress={() => setPl(places.filter((_, j) => j !== i))}><Text style={[s.link, { color: c.slow }]}>Remove</Text></Pressable>
+          </View>
+        ))}
+        <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Name, e.g. Home" placeholderTextColor={c.muted} />
+        <Btn s={s} kind="ghost" label={busy ? "Finding you…" : "Save where I am now"} onPress={saveHere} />
+      </View>
+      <View style={s.card}>
+        <Text style={s.h2}>Made-up traffic</Text>
+        <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>People driving in from Samarahan, Siburan, Matang, Samariang, Sejingkat</Text><Switch value={settings.commOn} onValueChange={v => upd("commOn", v)} /></View>
+        <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>400 delivery vans leaving depots at 7:00</Text><Switch value={settings.vansOn} onValueChange={v => upd("vansOn", v)} /></View>
+        <Text style={s.label}>School hours (not confirmed yet)</Text>
+        <Seg s={s} value={settings.sess} onChange={v => upd("sess", v)} options={[["morning", "Morning only"], ["both", "Morning + afternoon"]]} />
+        <Text style={[s.hint, { marginTop: 8 }]}>This practice version doesn't use live traffic. It estimates traffic from the type of road, the time of day, school hours and the settings above, to test whether the advice is useful before connecting real data.</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+// ---------------------------------------------------------------- small parts
+function Btn({ s, label, onPress, kind = "solid", small }) {
+  return <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [kind === "solid" ? s.btn : s.btnGhost, small && s.btnSmall, pressed && { opacity: .7 }]}><Text style={[kind === "solid" ? s.btnText : s.btnGhostText, small && { fontSize: s.small.fontSize }]}>{label}</Text></Pressable>;
+}
+function Seg({ s, value, onChange, options }) {
+  return <View style={s.seg}>{options.map(([v, l]) => <Pressable key={String(v)} onPress={() => onChange(v)} style={[s.segItem, v === value && s.segOn]} accessibilityRole="radio" accessibilityState={{ selected: v === value }}><Text style={[s.segText, v === value && s.segTextOn]}>{l}</Text></Pressable>)}</View>;
+}
+function Pill({ s, c, tone, text }) {
+  const m = { ok: [c.okSoft, c.ok], warn: [c.schoolSoft, c.school], bad: [c.slowSoft, c.slow], info: [c.accentSoft, c.accent] }[tone];
+  return <View style={[s.pill, { backgroundColor: m[0] }]}><Text style={[s.pillText, { color: m[1] }]}>{text}</Text></View>;
+}
+function Fact({ s, k, v }) { return <View style={s.fact}><Text style={s.factK}>{k}</Text><Text style={s.factV}>{v}</Text></View>; }
+function Note({ s, c, t }) { return <View style={s.note}><View style={[s.dot, { backgroundColor: c }]} /><Text style={[s.body, { flex: 1 }]}>{t}</Text></View>; }
+function Stat({ s, k, v, sub }) { return <View style={s.stat}><Text style={s.factK}>{k}</Text><Text style={s.statV}>{v}</Text><Text style={s.hint}>{sub}</Text></View>; }
+
+function makeStyles(c, f) {
+  const fs = n => Math.round(n * f);
+  return StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 },
+    title: { fontSize: fs(20), fontWeight: "700", color: c.fg },
+    badge: { fontSize: fs(12), color: c.school, marginTop: 2 },
+    page: { padding: 16, gap: 14, paddingBottom: 40 },
+    card: { backgroundColor: c.surface, borderRadius: 14, borderWidth: 1, borderColor: c.line, padding: 14 },
+    row: { flexDirection: "row", gap: 8 },
+    label: { fontSize: fs(13), color: c.muted, fontWeight: "600", marginBottom: 6 },
+    h2: { fontSize: fs(17), fontWeight: "700", color: c.fg, marginBottom: 6 },
+    body: { fontSize: fs(15), color: c.fg, lineHeight: fs(21) },
+    hint: { fontSize: fs(12.5), color: c.muted, lineHeight: fs(18), marginTop: 4 },
+    small: { fontSize: fs(13) },
+    mono: { fontSize: fs(13), color: c.fg, fontVariant: ["tabular-nums"] },
+    link: { fontSize: fs(15), color: c.accent, fontWeight: "600" },
+    select: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: c.line, borderRadius: 10, paddingHorizontal: 12, minHeight: fs(46), backgroundColor: c.surface },
+    selectText: { flex: 1, fontSize: fs(16), color: c.fg },
+    chev: { color: c.muted, fontSize: fs(14) },
+    timeBig: { fontSize: fs(30), fontWeight: "700", color: c.fg, fontVariant: ["tabular-nums"], minWidth: fs(92), textAlign: "center" },
+    btn: { backgroundColor: c.accent, borderRadius: 999, minHeight: fs(48), paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
+    btnText: { color: c.accentInk, fontWeight: "700", fontSize: fs(16) },
+    btnGhost: { borderWidth: 1.5, borderColor: c.accent, borderRadius: 999, minHeight: fs(46), paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
+    btnGhostText: { color: c.accent, fontWeight: "700", fontSize: fs(15), textAlign: "center" },
+    btnSmall: { minHeight: fs(38), paddingHorizontal: 10 },
+    seg: { flexDirection: "row", backgroundColor: c.sunk, borderRadius: 999, padding: 3, flex: 1 },
+    segItem: { flex: 1, borderRadius: 999, paddingVertical: 8, alignItems: "center" },
+    segOn: { backgroundColor: c.surface },
+    segText: { fontSize: fs(14), color: c.muted, fontWeight: "600" },
+    segTextOn: { color: c.fg },
+    cap: { fontSize: fs(13), color: c.muted, fontWeight: "700", letterSpacing: 1 },
+    leave: { fontSize: fs(44), fontWeight: "800", color: c.fg, fontVariant: ["tabular-nums"], marginRight: 6 },
+    via: { fontSize: fs(16), fontWeight: "600", color: c.fg, marginTop: 4 },
+    pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "center" },
+    pillText: { fontSize: fs(12.5), fontWeight: "700" },
+    fact: { flex: 1, backgroundColor: c.sunk, borderRadius: 10, padding: 8 },
+    factK: { fontSize: fs(11), color: c.muted, fontWeight: "700", textTransform: "uppercase", letterSpacing: .5 },
+    factV: { fontSize: fs(16), fontWeight: "700", color: c.fg, fontVariant: ["tabular-nums"] },
+    whyBox: { borderWidth: 1, borderRadius: 10, padding: 12, marginTop: 12, gap: 4, backgroundColor: c.accentSoft },
+    notes: { borderWidth: 1, borderColor: c.line, borderRadius: 10, marginVertical: 12 },
+    note: { flexDirection: "row", gap: 10, padding: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
+    dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6 },
+    listRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line, borderRadius: 6 },
+    input: { borderWidth: 1, borderColor: c.line, borderRadius: 10, padding: 10, fontSize: fs(15), color: c.fg, marginBottom: 8, minHeight: fs(44) },
+    switchRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
+    statsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    stat: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 12, padding: 10, flexBasis: "47%", flexGrow: 1 },
+    statV: { fontSize: fs(20), fontWeight: "800", color: c.fg, fontVariant: ["tabular-nums"] },
+    tabs: { flexDirection: "row", borderTopWidth: 1, borderTopColor: c.line, backgroundColor: c.surface },
+    tab: { flex: 1, alignItems: "center", paddingVertical: 10, gap: 4 },
+    tabDot: { width: 22, height: 4, borderRadius: 2, backgroundColor: "transparent" },
+    tabText: { fontSize: fs(13), color: c.muted },
+    modalHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: c.line, backgroundColor: c.surface },
+    sectionHead: { fontSize: fs(12), fontWeight: "700", color: c.muted, textTransform: "uppercase", letterSpacing: .6, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6 },
+    pickRow: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line, backgroundColor: c.surface },
+  });
+}

@@ -1,0 +1,17 @@
+daytype,scenario,fleet,coord_mean_pts,coord_min,coord_max,coord_significant,school_safe_mean_pts,school_safe_significant,setups,random_mean_pts
+holiday,closure,100,0.06,-0.10,0.55,0,0.06,0,9,-17.49
+holiday,closure,200,0.18,-0.05,0.45,0,0.18,0,9,-16.06
+holiday,closure,400,0.88,0.03,2.46,4,0.88,4,9,-15.85
+holiday,closure,800,3.50,2.17,5.21,9,3.50,9,9,-15.08
+holiday,normal,100,0.07,0.00,0.15,0,0.07,0,9,-18.42
+holiday,normal,200,0.13,0.07,0.17,0,0.13,0,9,-18.03
+holiday,normal,400,0.57,0.25,0.74,3,0.57,3,9,-18.38
+holiday,normal,800,4.48,3.90,5.29,9,4.48,9,9,-22.38
+term,closure,100,0.29,-0.05,0.75,1,-0.62,0,9,-19.91
+term,closure,200,0.31,-0.03,0.78,1,-0.15,1,9,-19.13
+term,closure,400,1.32,0.87,1.89,7,1.69,3,9,-18.31
+term,closure,800,1.44,-0.94,3.86,3,3.56,8,9,-18.51
+term,normal,100,0.02,-0.15,0.20,0,0.07,0,9,-24.25
+term,normal,200,-0.19,-0.33,-0.03,0,-0.21,0,9,-25.08
+term,normal,400,0.29,-0.04,0.57,0,-0.01,0,9,-27.28
+term,normal,800,3.25,2.61,3.62,9,0.60,6,9,-30.60

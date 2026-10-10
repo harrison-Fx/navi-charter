@@ -1,0 +1,29 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'noise_sigma': 0.25, 'warn_threshold': 0.5}
+Surprise closure on: Padungan–Pending (200 held-out days each)
+
+Typical app (naive)               on-time  91.8% | avg  14.7 min | cost RM  3,146 (fuel RM1,018) | unannounced late  32.8
+   ...with surprise closure       on-time  60.8% | avg  43.6 min | cost RM  9,010 (fuel RM1,515) | unannounced late 156.7
+Herd-aware batch                  on-time  94.1% | avg  14.6 min | cost RM  2,902 (fuel RM  970) | unannounced late  23.7
+   ...with surprise closure       on-time  74.4% | avg  28.6 min | cost RM  6,114 (fuel RM1,211) | unannounced late 102.4
+Herd-aware + live early warnings  on-time  94.9% | avg  14.5 min | cost RM  2,598 (fuel RM  973) | unannounced late   5.0
+   ...with surprise closure       on-time  81.4% | avg  22.6 min | cost RM  3,813 (fuel RM1,113) | unannounced late   4.5
+
+Warning quality (live advisor, held-out days):
+  normal peak :  29.8 warnings/day, precision 64%, recall 80%
+  closure day : 107.4 warnings/day, precision 93%, recall 97%
+
+False-alarm trade-off (normal peak, up to 100 days):
+ threshold | warnings/day | precision | recall
+   0.3     |      42.8    |     46%   |    91%
+   0.5     |      28.4    |     63%   |    83%
+   0.7     |      20.3    |     73%   |    69%
+
+Sample closure day: 102 early warnings -> kuching_warnings.csv
+  #  0      Pending -> Satok        P(late) 1.00  Notify customer: realistic ETA 51 min (promised 15)
+  #  2      Pending -> Padungan     P(late) 1.00  Notify customer: realistic ETA 46 min (promised 9)
+  #  3      Pending -> Satok        P(late) 1.00  Notify customer: realistic ETA 51 min (promised 13)
+  # 10      Pending -> Batu Kawa    P(late) 1.00  Reroute via Kenyalang > Padungan > City Centre > Satok (P(late) 100% -> 93%); Notify customer: realistic ETA 31 min (promised 27)
+  # 20      Pending -> Batu Lintang P(late) 1.00  Reroute via Kenyalang > Simpang Tiga (P(late) 100% -> 0%)
+  # 26      Pending -> Batu Kawa    P(late) 1.00  Reroute via Kenyalang > Padungan > City Centre > Satok (P(late) 100% -> 40%)
+charts: kuching_results.png, kuching_map.png

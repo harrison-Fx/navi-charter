@@ -1,0 +1,17 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'wave_min': 15, 'bin_min': 5, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'min_distinct_km': 0.3, 'min_distinct_share': 0.1, 'noise_sigma': 0.25, 'sensor_sigma': 0.1, 'warn_threshold': 0.5, 'mc_samples': 30, 'wave_start': '07:00', 'school_windows': (('06:45', '07:30'), ('12:30', '13:30')), 'school_boost': 0.35, 'school_radius_km': 0.3, 'school_safe_rm': 3.0}
+
+Priority inflation test — 800 vehicles, school-term days (15 days x 3 seeds)
+-- normal: on-time vs honest tightest-deadline-first (pts, mean ± 95% CI)
+   independent  -2.99 ± 0.80
+   neutral      +0.08 ± 0.32
+   all_urgent   -0.55 ± 0.32
+   cheat_30     -0.20 ± 0.19
+   with 30% cheating: cheaters -0.34 ± 0.29 | honest others -0.14 ± 0.26
+-- closure: on-time vs honest tightest-deadline-first (pts, mean ± 95% CI)
+   independent  +0.44 ± 0.94
+   neutral      -0.12 ± 0.24
+   all_urgent   -0.36 ± 0.22
+   cheat_30     -0.09 ± 0.11
+   with 30% cheating: cheaters -0.96 ± 0.37 | honest others +0.28 ± 0.13
+Saved: priority_scan_800_approx.csv

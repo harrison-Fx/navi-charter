@@ -1,0 +1,22 @@
+# dependencies and build output
+node_modules/
+mobile/.expo/
+mobile/android/
+mobile/ios/
+dist/
+*.apk
+*.aab
+# python
+__pycache__/
+*.pyc
+.venv/
+# large or generated data (Replit regenerates these)
+data/*.graphml
+# local secrets
+.env
+*.keystore
+*.jks
+# editors and OS
+.DS_Store
+Thumbs.db
+.vscode/

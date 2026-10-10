@@ -1,0 +1,4 @@
+numpy>=1.26
+networkx>=3.2
+matplotlib>=3.8
+osmnx>=2.0  # only needed for --osm

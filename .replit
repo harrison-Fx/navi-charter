@@ -1,0 +1,2 @@
+run = "python kuching_advisor.py"
+entrypoint = "kuching_advisor.py"

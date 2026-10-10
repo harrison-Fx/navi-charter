@@ -1,0 +1,21 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'wave_min': 15, 'bin_min': 5, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'min_distinct_km': 0.3, 'min_distinct_share': 0.1, 'noise_sigma': 0.25, 'sensor_sigma': 0.1, 'warn_threshold': 0.5, 'mc_samples': 30, 'wave_start': '07:00', 'school_boost': 0.35, 'unknown_session_as': 'morning', 'double_session_share': 0.5, 'school_radius_km': 0.3, 'school_safe_rm': 3.0}
+06:30 normal  typical app  93.7% | coordinated +0.99±0.51 | school-safe +0.57±0.49 | school passes 97/107/73 (unavoidable 51)
+06:30 closure typical app  73.0% | coordinated +1.12±0.62 | school-safe +0.78±0.58 | school passes 183/180/131 (unavoidable 51)
+07:00 normal  typical app  88.5% | coordinated -0.11±0.29 | school-safe -0.27±0.32 | school passes 279/308/264 (unavoidable 261)
+07:00 closure typical app  58.4% | coordinated +1.46±0.90 | school-safe +4.24±1.28 | school passes 522/547/437 (unavoidable 261)
+07:30 normal  typical app  95.4% | coordinated +0.63±0.50 | school-safe +0.63±0.50 | school passes 0/0/0 (unavoidable 0)
+07:30 closure typical app  77.0% | coordinated +0.47±0.50 | school-safe +0.47±0.50 | school passes 0/0/0 (unavoidable 0)
+08:00 normal  typical app  95.4% | coordinated +0.63±0.50 | school-safe +0.63±0.50 | school passes 0/0/0 (unavoidable 0)
+08:00 closure typical app  77.0% | coordinated +0.47±0.50 | school-safe +0.47±0.50 | school passes 0/0/0 (unavoidable 0)
+10:00 normal  typical app  95.4% | coordinated +0.63±0.50 | school-safe +0.63±0.50 | school passes 0/0/0 (unavoidable 0)
+10:00 closure typical app  77.0% | coordinated +0.47±0.50 | school-safe +0.47±0.50 | school passes 0/0/0 (unavoidable 0)
+12:45 normal  typical app  89.3% | coordinated +0.56±0.46 | school-safe +0.47±0.41 | school passes 176/178/170 (unavoidable 169)
+12:45 closure typical app  64.5% | coordinated +0.99±0.65 | school-safe +2.78±1.05 | school passes 275/298/241 (unavoidable 169)
+13:15 normal  typical app  88.5% | coordinated -0.18±0.28 | school-safe -0.32±0.32 | school passes 281/309/268 (unavoidable 266)
+13:15 closure typical app  58.2% | coordinated +1.52±0.92 | school-safe +4.23±1.30 | school passes 525/551/440 (unavoidable 266)
+14:00 normal  typical app  95.4% | coordinated +0.63±0.50 | school-safe +0.63±0.50 | school passes 0/0/0 (unavoidable 0)
+14:00 closure typical app  77.0% | coordinated +0.47±0.50 | school-safe +0.47±0.50 | school passes 0/0/0 (unavoidable 0)
+18:00 normal  typical app  94.1% | coordinated +0.97±0.49 | school-safe +0.94±0.47 | school passes 34/33/29 (unavoidable 28)
+18:00 closure typical app  74.8% | coordinated +1.01±0.64 | school-safe +1.18±0.65 | school passes 54/57/36 (unavoidable 28)
+Saved: wave_scan_approx.csv

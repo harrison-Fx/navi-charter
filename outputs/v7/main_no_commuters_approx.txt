@@ -1,0 +1,113 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'wave_min': 15, 'bin_min': 5, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'min_distinct_km': 0.3, 'min_distinct_share': 0.1, 'noise_sigma': 0.25, 'sensor_sigma': 0.1, 'warn_threshold': 0.5, 'mc_samples': 30, 'wave_start': '07:00', 'school_boost': 0.35, 'unknown_session_as': 'morning', 'double_session_share': 0.0, 'school_radius_km': 0.3, 'school_safe_rm': 3.0, 'commuters': 0.0, 'local_share': 0.8, 'am_peak': '07:20', 'am_sd': 45, 'pm_peak': '17:45', 'pm_sd': 50, 'tidal_floor': 0.15}
+seed 1:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+seed 2:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+seed 3:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+
+=== Kuching (approximate map), 400 vehicles, 60 days x 3 seeds — simulated ===
+Route search: penalty | OD pairs: 24 | routes per pair: 1:7, 2:5, 3:3, 4:9 | vehicles with >1 route: 271
+Alternatives are 12% longer (median), 25% max; cap 25%
+Simulated closure: 60% capacity loss on Padungan–Pending
+Wave starts 07:00; schools: 38 listed (38 with unverified session, treated as morning; two-session share of those primaries 0%); school-zone road segments: 38
+
+-- TERM DAY, NORMAL (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed  school avoidable
+Static plan (average traffic)         85.6%      106.4     25.5    1,072         2,668     29.2     266         5
+Live, independent (typical app)       87.1%      105.0     25.0    1,067         2,642      0.0     286        25
+Live, random split                    61.7%      124.7     31.4    1,131         3,001    176.1     550       289
+Live, coordinated (herd-aware)        87.7%      105.1     24.9    1,049         2,625     29.8     322        62
+Live, coordinated + school-safe       86.9%      105.4     25.2    1,066         2,648     20.0     267         6
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -1.49 ± 0.37 pts | vehicle-hours +1.38 ± 0.42
+  Live, random split               on-time -25.47 ± 0.82 pts | vehicle-hours +19.70 ± 0.67
+  Live, coordinated (herd-aware)   on-time +0.56 ± 0.20 pts | vehicle-hours +0.06 ± 0.15
+  Live, coordinated + school-safe  on-time -0.21 ± 0.21 pts | vehicle-hours +0.41 ± 0.19
+Detours (coordinated vs independent): 29.8 vehicles/day moved, mean extra -2.11 km, worst 3.12 km
+-- TERM DAY, NORMAL -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)        56.5       73%     81%     88%     10.0    1,030     407     615   1,030  0.044
+Live, coordinated (herd-aware)         54.3       72%     80%     88%      9.9      985     395     592     985  0.044
+
+-- TERM DAY, CLOSURE (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed  school avoidable
+Static plan (average traffic)         55.3%      317.7    107.0    1,617         6,383    133.6     266         5
+Live, independent (typical app)       58.6%      140.3     34.5    1,140         3,244      0.0     540       279
+Live, random split                    46.6%      196.4     74.0    1,316         4,261    175.0     549       289
+Live, coordinated (herd-aware)        60.5%      138.1     33.6    1,117         3,188     50.7     560       299
+Live, coordinated + school-safe       62.8%      146.8     37.8    1,147         3,348     60.9     466       205
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -3.30 ± 0.84 pts | vehicle-hours +177.44 ± 27.89
+  Live, random split               on-time -12.06 ± 0.76 pts | vehicle-hours +56.08 ± 8.92
+  Live, coordinated (herd-aware)   on-time +1.81 ± 0.43 pts | vehicle-hours -2.17 ± 0.63
+  Live, coordinated + school-safe  on-time +4.11 ± 0.67 pts | vehicle-hours +6.50 ± 1.80
+Detours (coordinated vs independent): 50.7 vehicles/day moved, mean extra -1.17 km, worst 5.88 km
+-- TERM DAY, CLOSURE -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)       170.6       92%     94%     80%      9.2    3,309     965   1,746   3,309  0.041
+Live, coordinated (herd-aware)        162.9       91%     94%     83%     10.1    3,164     942   1,683   3,164  0.043
+
+-- HOLIDAY DAY, NORMAL (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed  school avoidable
+Static plan (average traffic)         91.2%       99.8     24.4    1,055         2,551     34.1       0         0
+Live, independent (typical app)       93.6%       97.8     23.7    1,041         2,508      0.0       0         0
+Live, random split                    76.7%      110.5     28.0    1,094         2,751    175.0       0         0
+Live, coordinated (herd-aware)        94.6%       97.8     23.5    1,006         2,473     56.0       0         0
+Live, coordinated + school-safe       94.6%       97.8     23.5    1,006         2,473     56.0       0         0
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -2.42 ± 0.57 pts | vehicle-hours +1.99 ± 0.56
+  Live, random split               on-time -16.92 ± 0.63 pts | vehicle-hours +12.67 ± 0.46
+  Live, coordinated (herd-aware)   on-time +1.02 ± 0.27 pts | vehicle-hours -0.02 ± 0.17
+  Live, coordinated + school-safe  on-time +1.02 ± 0.27 pts | vehicle-hours -0.02 ± 0.17
+Detours (coordinated vs independent): 56.0 vehicles/day moved, mean extra -2.07 km, worst 1.98 km
+-- HOLIDAY DAY, NORMAL -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)        30.9       65%     79%     91%      5.5      514     211     312     514  0.028
+Live, coordinated (herd-aware)         26.8       66%     82%     90%      3.9      432     167     255     432  0.023
+
+-- HOLIDAY DAY, CLOSURE (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed  school avoidable
+Static plan (average traffic)         60.2%      311.1    106.9    1,600         6,266    142.4       0         0
+Live, independent (typical app)       77.0%      123.0     29.5    1,090         2,935      0.0       0         0
+Live, random split                    61.3%      182.7     73.2    1,281         4,021    174.8       0         0
+Live, coordinated (herd-aware)        77.5%      122.8     29.4    1,065         2,907     64.9       0         0
+Live, coordinated + school-safe       77.5%      122.8     29.4    1,065         2,907     64.9       0         0
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -16.71 ± 0.64 pts | vehicle-hours +188.08 ± 27.85
+  Live, random split               on-time -15.70 ± 0.54 pts | vehicle-hours +59.70 ± 8.85
+  Live, coordinated (herd-aware)   on-time +0.52 ± 0.36 pts | vehicle-hours -0.19 ± 0.34
+  Live, coordinated + school-safe  on-time +0.52 ± 0.36 pts | vehicle-hours -0.19 ± 0.34
+Detours (coordinated vs independent): 64.9 vehicles/day moved, mean extra -1.49 km, worst 1.98 km
+-- HOLIDAY DAY, CLOSURE -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)        94.3       94%     96%     81%      4.0    1,844     521     962   1,844  0.018
+Live, coordinated (herd-aware)         93.0       93%     96%     83%      3.9    1,802     509     940   1,802  0.018
+school = vehicle passes through school-zone roads during school windows; avoidable = passes above the
+minimum any acceptable route allows (the rest are unavoidable: destination or every route in a school zone)
+comp RM = modelled compensation with no warnings (RM20 per late drop); @RM5/10/20 = same, if a warned late
+drop costs RM5/10/20 instead. @RM20 shows warnings saving nothing: compensation value is an ASSUMPTION.
+
+Calibration of P(late) (all warned-plan vehicles, both scenarios):
+ predicted   n      observed late rate
+ 0.0-0.1   398060   0%
+ 0.1-0.3    35425   11%
+ 0.3-0.5    18459   26%
+ 0.5-0.7    15084   42%
+ 0.7-0.9    16213   66%
+ 0.9-1.0    92759   98%
+Sample closure-day warnings (224) -> warnings_approx.csv
+Saved: results_approx.csv, warnings_approx.csv, ledger1_approx.png

@@ -1,0 +1,28 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'wave_min': 15, 'bin_min': 5, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'min_distinct_km': 0.3, 'min_distinct_share': 0.1, 'noise_sigma': 0.25, 'sensor_sigma': 0.1, 'warn_threshold': 0.5, 'mc_samples': 30, 'wave_start': '07:00', 'school_boost': 0.35, 'unknown_session_as': 'morning', 'double_session_share': 0.0, 'school_radius_km': 0.3, 'school_safe_rm': 3.0, 'commuters': 1.0, 'local_share': 0.8, 'am_peak': '07:20', 'am_sd': 45, 'pm_peak': '17:45', 'pm_sd': 50, 'tidal_floor': 0.15}
+Busiest roads in the morning commuter peak (v/c incl. inflow from outside Kuching):
+  Simpang Tiga–Stutong                            Stutong -> Simpang Tiga   v/c 1.32  commuters 446/15min
+  Batu Lintang–Simpang Tiga                  Simpang Tiga -> Batu Lintang   v/c 1.19  commuters 270/15min
+  Satok–Batu Lintang                         Batu Lintang -> Satok          v/c 1.14  commuters 262/15min
+  Satok–Petra Jaya                             Petra Jaya -> Satok          v/c 1.14  commuters 279/15min
+  Batu Lintang–Airport                            Airport -> Batu Lintang   v/c 1.12  commuters 225/15min
+  Airport–Kota Sentosa                       Kota Sentosa -> Airport        v/c 1.12  commuters 321/15min
+06:30 normal  typical app  95.8% | coordinated +0.67±0.22 | school-safe +0.43±0.23 | school passes 99/106/64 (unavoidable 51)
+06:30 closure typical app  74.2% | coordinated +1.73±0.42 | school-safe +1.62±0.36 | school passes 174/173/115 (unavoidable 51)
+07:00 normal  typical app  91.1% | coordinated +0.12±0.19 | school-safe -0.19±0.15 | school passes 294/333/270 (unavoidable 261)
+07:00 closure typical app  62.1% | coordinated +1.46±0.46 | school-safe +2.91±0.53 | school passes 518/548/429 (unavoidable 261)
+07:30 normal  typical app  96.0% | coordinated +0.25±0.16 | school-safe +0.25±0.16 | school passes 0/0/0 (unavoidable 0)
+07:30 closure typical app  76.6% | coordinated +0.72±0.44 | school-safe +0.72±0.44 | school passes 0/0/0 (unavoidable 0)
+08:00 normal  typical app  97.4% | coordinated +0.22±0.20 | school-safe +0.22±0.20 | school passes 0/0/0 (unavoidable 0)
+08:00 closure typical app  78.7% | coordinated +0.80±0.42 | school-safe +0.80±0.42 | school passes 0/0/0 (unavoidable 0)
+10:00 normal  typical app  98.6% | coordinated +0.26±0.15 | school-safe +0.26±0.15 | school passes 0/0/0 (unavoidable 0)
+10:00 closure typical app  80.3% | coordinated +1.04±0.46 | school-safe +1.04±0.46 | school passes 0/0/0 (unavoidable 0)
+12:45 normal  typical app  98.6% | coordinated +0.25±0.15 | school-safe +0.25±0.15 | school passes 0/0/0 (unavoidable 0)
+12:45 closure typical app  80.3% | coordinated +1.05±0.46 | school-safe +1.00±0.46 | school passes 2/2/1 (unavoidable 0)
+13:15 normal  typical app  96.6% | coordinated +0.09±0.14 | school-safe -0.11±0.09 | school passes 276/311/268 (unavoidable 266)
+13:15 closure typical app  70.1% | coordinated +1.68±0.47 | school-safe +2.47±0.50 | school passes 496/539/427 (unavoidable 266)
+14:00 normal  typical app  98.6% | coordinated +0.26±0.15 | school-safe +0.26±0.15 | school passes 0/0/0 (unavoidable 0)
+14:00 closure typical app  80.3% | coordinated +1.04±0.46 | school-safe +1.04±0.46 | school passes 0/0/0 (unavoidable 0)
+18:00 normal  typical app  95.6% | coordinated +0.29±0.15 | school-safe +0.29±0.15 | school passes 0/0/0 (unavoidable 0)
+18:00 closure typical app  76.9% | coordinated +0.80±0.36 | school-safe +0.80±0.36 | school passes 0/0/0 (unavoidable 0)
+Saved: wave_scan_approx.csv

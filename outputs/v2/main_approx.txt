@@ -1,0 +1,70 @@
+Map: approximate corridor model
+ASSUMPTIONS: {'n_vehicles': 400, 'wave_min': 15, 'bin_min': 5, 'fuel_l_per_km': 0.12, 'idle_l_per_min': 0.02, 'fuel_rm_per_l': 2.15, 'driver_rm_per_min': 0.25, 'late_penalty_rm': 20.0, 'notified_late_rm': 5.0, 'detour_cap': 1.25, 'min_distinct_km': 0.3, 'min_distinct_share': 0.1, 'noise_sigma': 0.25, 'sensor_sigma': 0.1, 'warn_threshold': 0.5, 'mc_samples': 30}
+seed 1:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+seed 2:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+seed 3:
+  ... day 12/60
+  ... day 24/60
+  ... day 36/60
+  ... day 48/60
+  ... day 60/60
+
+=== Kuching (approximate map), 400 vehicles, 60 days x 3 seeds — simulated ===
+Route search: penalty | OD pairs: 24 | routes per pair: 1:7, 2:5, 3:3, 4:9 | vehicles with >1 route: 271
+Alternatives are 12% longer (median), 25% max; cap 25%
+Simulated closure: 60% capacity loss on Padungan–Pending
+
+-- NORMAL (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed
+Static plan (average traffic)         92.4%       99.1     23.9    1,043         2,529     32.7
+Live, independent (typical app)       94.7%       97.2     23.2    1,036         2,494      0.0
+Live, random split                    76.5%      110.7     28.3    1,095         2,754    175.1
+Live, coordinated (herd-aware)        95.4%       97.3     23.0    1,002         2,463     53.2
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -2.29 ± 0.61 pts | vehicle-hours +1.84 ± 0.50
+  Live, random split               on-time -18.25 ± 0.56 pts | vehicle-hours +13.42 ± 0.41
+  Live, coordinated (herd-aware)   on-time +0.72 ± 0.24 pts | vehicle-hours +0.12 ± 0.14
+Detours (coordinated vs independent): 53.2 vehicles/day moved, mean extra -2.07 km, worst 3.12 km
+-- NORMAL -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)        27.4       62%     81%     91%      4.0      422     165     250     422  0.024
+Live, coordinated (herd-aware)         23.2       64%     81%     90%      3.4      364     142     216     364  0.021
+
+-- CLOSURE (180 simulated days) -- LEDGER 1: physical
+strategy                            on-time  veh-hours  P90 min  fuel RM  time+fuel RM  changed
+Static plan (average traffic)         60.0%      276.2     92.9    1,500         5,643    138.4
+Live, independent (typical app)       76.7%      120.6     29.6    1,076         2,885      0.0
+Live, random split                    60.7%      170.4     63.2    1,248         3,804    174.0
+Live, coordinated (herd-aware)        77.3%      120.1     29.3    1,055         2,856     52.2
+Paired difference vs live independent (mean ± 95% CI across days):
+  Static plan (average traffic)    on-time -16.71 ± 0.61 pts | vehicle-hours +155.62 ± 23.18
+  Live, random split               on-time -15.97 ± 0.52 pts | vehicle-hours +49.80 ± 7.51
+  Live, coordinated (herd-aware)   on-time +0.56 ± 0.32 pts | vehicle-hours -0.49 ± 0.36
+Detours (coordinated vs independent): 52.2 vehicles/day moved, mean extra -1.49 km, worst 3.12 km
+-- CLOSURE -- LEDGER 2: early warnings (same policy on both plans)
+plan                               warn/day precision  recall  ETA ok unwarned  comp RM    @RM5   @RM10   @RM20  Brier
+Live, independent (typical app)        97.6       92%     96%     81%      3.6    1,864     519     967   1,864  0.020
+Live, coordinated (herd-aware)         95.2       92%     96%     83%      3.6    1,818     509     946   1,818  0.020
+comp RM = modelled compensation with no warnings (RM20 per late drop); @RM5/10/20 = same, if a warned late
+drop costs RM5/10/20 instead. @RM20 shows warnings saving nothing: compensation value is an ASSUMPTION.
+
+Calibration of P(late) (all warned-plan vehicles, both scenarios):
+ predicted   n      observed late rate
+ 0.0-0.1   223330   0%
+ 0.1-0.3    14142   7%
+ 0.3-0.5     6714   20%
+ 0.5-0.7     5379   37%
+ 0.7-0.9     5066   59%
+ 0.9-1.0    33369   98%
+Sample closure-day warnings (97) -> warnings_approx.csv
+Saved: results_approx.csv, warnings_approx.csv, ledger1_approx.png

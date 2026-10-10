@@ -1,0 +1,15 @@
+fake_share,mode,scenario,typical_app_on_time,fooled_vs_typical,ci,fooled_vs_honest,ci_honest,school_safe_fooled_vs_typical,vehicles_moved
+0.0,none,normal,88.1,0.07,0.36,0.0,0.0,-0.15,39.8
+0.0,none,closure,60.1,1.33,0.74,0.0,0.0,3.73,40.8
+0.1,random,normal,88.1,0.06,0.36,-0.01,0.04,-0.12,40.4
+0.1,random,closure,60.1,1.47,0.75,0.14,0.1,3.8,42.5
+0.1,targeted,normal,88.1,0.02,0.37,-0.05,0.06,-0.15,42.6
+0.1,targeted,closure,60.1,1.52,0.79,0.19,0.18,3.58,45.5
+0.3,random,normal,88.1,0.06,0.36,-0.0,0.04,-0.11,41.6
+0.3,random,closure,60.1,1.7,0.74,0.37,0.18,3.89,46.1
+0.3,targeted,normal,88.1,-0.21,0.38,-0.28,0.14,-0.15,47.9
+0.3,targeted,closure,60.1,1.47,0.83,0.14,0.27,3.29,55.1
+0.5,random,normal,88.1,0.1,0.36,0.03,0.06,-0.09,42.2
+0.5,random,closure,60.1,1.92,0.75,0.59,0.25,3.96,49.3
+0.5,targeted,normal,88.1,-0.46,0.41,-0.53,0.19,-0.09,52.4
+0.5,targeted,closure,60.1,1.22,0.86,-0.11,0.38,2.7,61.8

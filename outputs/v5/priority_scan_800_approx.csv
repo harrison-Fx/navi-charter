@@ -1,0 +1,13 @@
+vehicles,scenario,comparison,diff,ci
+800,normal,independent vs honest_slack,-2.99,0.8
+800,normal,neutral vs honest_slack,0.08,0.32
+800,normal,all_urgent vs honest_slack,-0.55,0.32
+800,normal,cheat_30 vs honest_slack,-0.2,0.19
+800,normal,cheaters gain (cheat_30 vs honest),-0.34,0.29
+800,normal,honest others change (cheat_30 vs honest),-0.14,0.26
+800,closure,independent vs honest_slack,0.44,0.94
+800,closure,neutral vs honest_slack,-0.12,0.24
+800,closure,all_urgent vs honest_slack,-0.36,0.22
+800,closure,cheat_30 vs honest_slack,-0.09,0.11
+800,closure,cheaters gain (cheat_30 vs honest),-0.96,0.37
+800,closure,honest others change (cheat_30 vs honest),0.28,0.13

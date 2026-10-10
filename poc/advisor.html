@@ -1,0 +1,571 @@
+<title>Kuching Trip Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: planner column (form → advice) beside a schematic corridor map; test log below. Map-app neutrals, blue route accent, amber school, red slow. */
+:root{
+  --bg:#EEF0EC; --surface:#FFFFFF; --sunk:#E3E6E0; --line:#D3D7D0; --fg:#1E201C; --muted:#5B6058;
+  --accent:#2B5FAD; --accent-ink:#FFFFFF; --accent-soft:#E4ECF8;
+  --school:#B35A00; --school-soft:#FBEBD9; --slow:#B03030; --slow-soft:#F8E1E1; --ok:#2E7D4F; --ok-soft:#DFF1E6;
+  --road:#C9CEC5; --water:#BFD7EA;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151815; --surface:#1F231F; --sunk:#2A2F2A; --line:#373D37; --fg:#E8EBE6; --muted:#A3AA9F;
+  --accent:#78A6EC; --accent-ink:#0E1A2C; --accent-soft:#1E2D45;
+  --school:#F0A050; --school-soft:#3A2814; --slow:#F07B7B; --slow-soft:#3D1D1D; --ok:#6FCB94; --ok-soft:#173326;
+  --road:#454C44; --water:#24384A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151815; --surface:#1F231F; --sunk:#2A2F2A; --line:#373D37; --fg:#E8EBE6; --muted:#A3AA9F;
+  --accent:#78A6EC; --accent-ink:#0E1A2C; --accent-soft:#1E2D45;
+  --school:#F0A050; --school-soft:#3A2814; --slow:#F07B7B; --slow-soft:#3D1D1D; --ok:#6FCB94; --ok-soft:#173326;
+  --road:#454C44; --water:#24384A; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-size:24px;line-height:1.2;margin:0;font-weight:700;text-wrap:balance}
+h2{font-size:17px;margin:0;font-weight:600}
+.sub{color:var(--muted);margin:2px 0 0;max-width:62ch}
+.banner{background:var(--school-soft);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner b{color:var(--school)}
+nav.tabs{display:flex;gap:4px;background:var(--sunk);border-radius:999px;padding:4px}
+nav.tabs button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:420px){.row{grid-template-columns:minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500;min-width:0}
+input,select,textarea{font:inherit;font-size:15px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--muted)}
+details .row{margin-top:10px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer;color:var(--fg)}
+.seg input{width:auto;margin:0;accent-color:var(--accent)}
+.btn{font:inherit;font-weight:600;font-size:15px;border-radius:999px;padding:10px 18px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{font-size:13px;padding:6px 12px}
+.btn.danger{border-color:var(--slow);color:var(--slow);background:transparent}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* advice */
+.advice .leave{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.advice .leave .big{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.advice .leave .lbl{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.via{font-size:16px;font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.facts{grid-template-columns:minmax(0,1fr)}}
+.fact{background:var(--sunk);border-radius:10px;padding:8px 10px;min-width:0}
+.fact .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.fact .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--school-soft);color:var(--school)} .pill.bad{background:var(--slow-soft);color:var(--slow)} .pill.info{background:var(--accent-soft);color:var(--accent)}
+ul.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px}
+ul.notes li{display:flex;gap:10px;padding:9px 12px;font-size:14px;border-top:1px solid var(--line)}
+ul.notes li:first-child{border-top:0}
+ul.notes .ic{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px}
+.ic.school{background:var(--school)} .ic.slow{background:var(--slow)} .ic.herd{background:var(--accent)} .ic.ok{background:var(--ok)}
+.msgbox{font-family:var(--mono);font-size:13px;background:var(--sunk);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap}
+thead th{border-top:0;background:var(--sunk);font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+tr.chosen td{background:var(--accent-soft)}
+td.num,th.num{text-align:right}
+.mono{font-family:var(--mono)}
+
+/* map */
+.map svg{width:100%;height:auto;display:block;max-width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:2px}
+.timebar{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.timebar input{flex:1;padding:0}
+
+/* test */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12.5px;color:var(--muted)}
+.trip{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.trip .t{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-weight:600}
+.empty{color:var(--muted);font-size:14px;border:1px dashed var(--line);border-radius:10px;padding:14px}
+.pinbar{display:flex;flex-wrap:wrap;gap:6px}
+.btn.small.on{background:var(--accent);color:var(--accent-ink)}
+.map svg.pinning{cursor:crosshair}
+.saved{display:flex;flex-direction:column;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.saved li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.saved li span{min-width:0;overflow-wrap:anywhere}
+.inline{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.inline > label{flex:1 1 180px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;font-weight:500}
+@media (prefers-reduced-motion:no-preference){.toast{transition:opacity .2s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Kuching Trip Advisor</h1>
+      <p class="sub">Plan here, drive there. It tells you when to leave and which way to go, allowing for school drop-off and pick-up, people driving in from outside Kuching, and other trips already planned. Then it opens the route in Google Maps.</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-plan" aria-selected="true" aria-controls="view-plan">Plan a trip</button>
+      <button role="tab" id="tab-test" aria-selected="false" aria-controls="view-test">Try it for real</button>
+    </nav>
+  </header>
+
+  <div class="banner"><b>Practice version.</b> The traffic here is made up, not live: it is estimated from the type of road, the time of day, school hours, people driving in from Samarahan, Siburan, Matang, Samariang and Sejingkat, and 400 delivery vans leaving their depots at 7:00. Use it to test the idea (do people leave on time, does Google Maps keep our route, how close are the times), not to trust the numbers yet.</div>
+
+  <!-- PLAN -->
+  <section id="view-plan" role="tabpanel" aria-labelledby="tab-plan" class="grid">
+    <div class="col">
+      <form class="panel" id="planForm" autocomplete="off">
+        <h2>Your trip</h2>
+        <div class="row">
+          <label class="f" for="from">From<select id="from"></select></label>
+          <label class="f" for="to">To<select id="to"></select></label>
+        </div>
+        <div class="row" id="nearRow" hidden>
+          <label class="f" for="near">Which area are you near?<select id="near"></select></label>
+          <p class="hint" style="align-self:end">Used for the advice. Google Maps fills in your exact position when the link opens.</p>
+        </div>
+        <div class="pinbar">
+          <button type="button" class="btn small ghost" id="pinFrom" aria-pressed="false">Drop start pin</button>
+          <button type="button" class="btn small ghost" id="pinTo" aria-pressed="false">Drop destination pin</button>
+          <button type="button" class="btn small ghost" id="saveToggle">Save destination</button>
+        </div>
+        <p class="hint" id="pinHint" hidden>Tap the route map to place the pin.</p>
+        <div class="inline" id="saveRow" hidden>
+          <label class="f" for="placeName">Name this place<input id="placeName" maxlength="30" placeholder="e.g. Home, Office, Mum's house"></label>
+          <button type="button" class="btn small" id="savePlace">Save</button>
+        </div>
+        <div class="row">
+          <label class="f" for="arriveBy">Arrive by<input id="arriveBy" type="time" value="07:30" step="300"></label>
+          <label class="f" for="dayType">Day<select id="dayType"><option value="term">School day</option><option value="holiday">School holiday / weekend</option></select></label>
+        </div>
+        <div>
+          <div class="hint" style="margin-bottom:6px">How sure do you want to be of arriving on time?</div>
+          <div class="seg" role="radiogroup" aria-label="Confidence">
+            <label><input type="radio" name="conf" id="conf80" value="0.8">80%</label>
+            <label><input type="radio" name="conf" id="conf90" value="0.9" checked>90%</label>
+            <label><input type="radio" name="conf" id="conf95" value="0.95">95%</label>
+          </div>
+        </div>
+        <details>
+          <summary>Paste a location or manage saved places</summary>
+          <div class="inline" style="margin-top:10px">
+            <label class="f" for="paste">Google Maps link or coordinates<input id="paste" placeholder="e.g. 1.5402, 110.3448 or a maps link"></label>
+            <select id="pasteFor" aria-label="Use for" style="width:auto"><option value="to">as destination</option><option value="from">as start</option></select>
+            <button type="button" class="btn small" id="pasteUse">Use</button>
+          </div>
+          <ul class="saved" id="savedList"></ul>
+          <p class="hint" style="margin-top:8px">Saved places stay on this device only. Nothing is sent to a server.</p>
+        </details>
+        <details>
+          <summary>Made-up traffic settings</summary>
+          <div class="row">
+            <label class="f" for="fleetOn">Delivery vans leaving depots at 7:00<select id="fleetOn"><option value="1">400 vans (default)</option><option value="0">None</option></select></label>
+            <label class="f" for="commOn">People driving in from outside Kuching<select id="commOn"><option value="1">Included (default)</option><option value="0">Left out</option></select></label>
+            <label class="f" for="sessAssume">School hours (not confirmed yet)<select id="sessAssume"><option value="morning">Morning school only</option><option value="both">Morning and afternoon school</option></select></label>
+          </div>
+        </details>
+      </form>
+
+      <section class="panel advice" id="advice" aria-live="polite"></section>
+
+      <section class="panel" id="routesPanel">
+        <h2>Other ways to go</h2>
+        <div class="tablewrap"><table id="routesTable"><thead><tr><th>Going through</th><th class="num">km</th><th class="num">Leave by</th><th class="num">Usual drive</th><th class="num">Chance late</th><th class="num">School zones</th><th class="num">Other planned trips</th></tr></thead><tbody></tbody></table></div>
+        <p class="hint">"Chance late" assumes you leave at that route's leave-by time. "Other planned trips" counts trips already planned through this app that use a road on that route around the same time. Spreading people across different routes is what stops everyone piling onto the same "fast" road.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel map">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2>Route map</h2>
+          <div class="pinbar" role="group" aria-label="Map area"><button type="button" class="btn small ghost on" data-view="city" aria-pressed="true">Kuching</button><button type="button" class="btn small ghost" data-view="greater" aria-pressed="false">Greater Kuching</button></div></div>
+        <div id="mapBox"></div>
+        <div class="timebar"><span>Traffic at</span><input type="range" id="mapTime" min="360" max="1200" step="5" value="420" aria-label="Map time"><span class="mono" id="mapTimeLbl">07:00</span></div>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>Recommended</span>
+          <span><i style="background:var(--slow)"></i>Slow (over 85% full)</span>
+          <span><i style="background:repeating-linear-gradient(90deg,var(--school) 0 5px,transparent 5px 9px)"></i>School drop-off or pick-up now</span>
+          <span><i style="background:var(--road)"></i>Other roads</span>
+          <span><i style="background:var(--sunk);border:1.5px solid var(--muted);width:10px;height:10px"></i>Areas around Kuching</span>
+        </div>
+        <p class="hint">A simplified map: 16 Kuching areas and the main roads between them, positions approximate. Squares are areas around Kuching (Samarahan, Siburan, Matang outer, Samariang, Sejingkat); the Kuching view draws their roads short, the Greater Kuching view shows them in place. In the morning traffic pours in through them and in the evening it goes back out, so a road can be jammed one way and clear the other. School times come from 38 listed schools; whether each runs morning or afternoon school is not confirmed yet.</p>
+      </section>
+      <section class="panel" id="reportsPanel">
+        <h2>Road reports</h2>
+        <div class="inline">
+          <label class="f" for="repRoad">Road<select id="repRoad"></select></label>
+          <label class="f" for="repKind" style="flex:0 1 150px">Problem<select id="repKind"><option value="closed">Closed / accident</option><option value="slow">Heavy jam</option></select></label>
+          <button type="button" class="btn small" id="repAdd">Report</button>
+        </div>
+        <ul class="saved" id="repList"></ul>
+        <p class="hint" id="repState">Reports last 2 hours and are shared with everyone using this page. Advice avoids closed roads and slows down jammed ones straight away.</p>
+      </section>
+    </div>
+  </section>
+
+  <!-- TEST -->
+  <section id="view-test" role="tabpanel" aria-labelledby="tab-test" hidden class="col">
+    <div class="panel">
+      <h2>How the test works</h2>
+      <p class="hint" style="font-size:14px;max-width:70ch">For about a week, alternate days: on "follow advice" days leave at the advised time and use the Maps link; on "usual way" days drive as you normally would. Save the plan before leaving, then fill in when you actually left and arrived. No account needed: entries are tagged with the nickname below.</p>
+      <div class="row">
+        <label class="f" for="nick">Your tester nickname<input id="nick" placeholder="e.g. Ming" maxlength="24"></label>
+        <label class="f" for="testDate">Trip date<input id="testDate" type="date"></label>
+      </div>
+      <div>
+        <div class="hint" style="margin-bottom:6px">Today's test mode</div>
+        <div class="seg" role="radiogroup" aria-label="Test mode">
+          <label><input type="radio" name="mode" id="modeFollow" value="follow" checked>Follow advice</label>
+          <label><input type="radio" name="mode" id="modeUsual" value="usual">Usual way</label>
+        </div>
+      </div>
+      <div class="actions"><button class="btn" id="saveTrip" type="button">Save current plan as a test trip</button></div>
+      <p class="hint" id="dbState">Connecting to the shared test log…</p>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="panel">
+      <h2>Trips waiting for your times</h2>
+      <div id="openTrips" class="col"></div>
+    </div>
+
+    <div class="panel">
+      <h2>All test trips</h2>
+      <div class="tablewrap"><table id="logTable"><thead><tr><th>Date</th><th>Tester</th><th>Trip</th><th>Mode</th><th class="num">Advised leave</th><th class="num">Left</th><th class="num">Predicted</th><th class="num">Arrived</th><th class="num">Error</th><th>On time</th><th>Maps kept our route</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------------- data (mirrors kuching_advisor.py, approximate map) ---------------- */
+const AREAS={"City Centre":[1.5580,110.3450],"Padungan":[1.5565,110.3570],"Pending":[1.5550,110.3850],"Bintawa":[1.5680,110.3720],"Kenyalang":[1.5450,110.3620],"Simpang Tiga":[1.5350,110.3550],"Stutong":[1.5200,110.3750],"Tabuan Jaya":[1.5300,110.3900],"Hui Sing":[1.5230,110.3600],"Batu Lintang":[1.5400,110.3450],"Satok":[1.5520,110.3350],"Petra Jaya":[1.5750,110.3300],"Batu Kawa":[1.5150,110.3000],"Matang":[1.5500,110.2850],"Airport":[1.4870,110.3450],"Kota Sentosa":[1.4700,110.3300]};
+const ROAD={trunk:[70,900,.85,1.0],primary:[50,700,.85,1.0],secondary:[40,450,.70,.90],tertiary:[30,250,.40,.60]};
+const CORR=[["City Centre","Padungan","primary"],["Padungan","Pending","primary"],["Padungan","Kenyalang","secondary"],["Pending","Bintawa","secondary"],["Pending","Tabuan Jaya","secondary"],["Kenyalang","Simpang Tiga","primary"],["City Centre","Batu Lintang","secondary"],["City Centre","Satok","primary"],["Satok","Petra Jaya","primary"],["Satok","Batu Kawa","primary"],["Satok","Batu Lintang","secondary"],["Batu Lintang","Simpang Tiga","secondary"],["Batu Lintang","Airport","primary"],["Simpang Tiga","Hui Sing","secondary"],["Simpang Tiga","Stutong","primary"],["Stutong","Tabuan Jaya","primary"],["Stutong","Hui Sing","tertiary"],["Hui Sing","Airport","secondary"],["Airport","Kota Sentosa","trunk"],["Batu Kawa","Kota Sentosa","secondary"],["Batu Kawa","Matang","secondary"],["Matang","Petra Jaya","secondary"],["Kota Sentosa","Stutong","trunk"],["Bintawa","Petra Jaya","tertiary"],["Pending","Kenyalang","tertiary"],["Kenyalang","Batu Lintang","tertiary"],["Padungan","Batu Lintang","tertiary"],["Tabuan Jaya","Kenyalang","tertiary"],["Hui Sing","Batu Lintang","tertiary"],["Airport","Batu Kawa","tertiary"]];
+/* schools per area from data/kuching_schools_sessions.csv (38 schools, all sessions unverified) */
+const SCHOOLS={"City Centre":{s:4,p:4},"Padungan":{s:2,p:0},"Pending":{s:1,p:0},"Bintawa":{s:0,p:1},"Batu Lintang":{s:2,p:1},"Kenyalang":{s:0,p:2},"Simpang Tiga":{s:1,p:0},"Tabuan Jaya":{s:1,p:1},"Stutong":{s:2,p:1},"Satok":{s:1,p:0},"Petra Jaya":{s:3,p:1},"Matang":{s:2,p:1},"Batu Kawa":{s:3,p:1},"Airport":{s:2,p:0},"Kota Sentosa":{s:1,p:0}};
+const WINDOWS={morning:[[405,450],[795,840]],both:[[405,450],[765,840],[1095,1140]]};
+/* traffic from outside Kuching: [lat, lon, AM-peak inbound veh per 15 min, entry roads [area, class, capacity]] (volumes ASSUMED) */
+const EXT={"Samarahan":[1.4600,110.4930,600,[["Stutong","trunk",900],["Tabuan Jaya","primary",500]]],"Siburan":[1.4050,110.3600,450,[["Kota Sentosa","trunk",900]]],"Matang outer":[1.5550,110.2450,250,[["Matang","secondary",450]]],"Samariang":[1.5950,110.3050,200,[["Petra Jaya","secondary",450]]],"Sejingkat":[1.5950,110.4100,120,[["Bintawa","secondary",450]]]};
+const EXT_NOTE={"Samarahan":"incl. Asajaya and Moyan, via the Kuching–Samarahan Expressway and Jalan Mambong–Sejingkat","Siburan":"via Jalan Kuching–Serian and Penrissen","Matang outer":"Matang Jaya and beyond","Samariang":"via Petra Jaya","Sejingkat":"via the Pending barrage road"};
+const JOBS={"City Centre":3,"Padungan":2,"Satok":2,"Petra Jaya":3,"Pending":2,"Batu Lintang":1,"Simpang Tiga":1,"Kenyalang":1,"Stutong":1,"Tabuan Jaya":1,"Hui Sing":1,"Airport":1,"Bintawa":1};
+const NODES={...AREAS};for(const z in EXT)NODES[z]=[EXT[z][0],EXT[z][1]];
+for(const z in EXT)for(const [a,cls,cap] of EXT[z][3])CORR.push([z,a,cls,cap]);
+const HUBS=[["Pending",.65],["Kota Sentosa",.35]];
+const DESTS={"City Centre":2,"Padungan":2,"Kenyalang":2,"Simpang Tiga":2,"Stutong":3,"Tabuan Jaya":3,"Hui Sing":3,"Batu Lintang":2,"Satok":2,"Petra Jaya":3,"Batu Kawa":4,"Matang":2};
+const P={bpr_a:.15,bpr_b:4,detour:1.25,minKm:.3,minShare:.10,sigma:.25,schoolBoost:.35,fleet:400,waveStart:420,waveMin:15,bin:5,mc:300};
+
+/* ---------------- helpers ---------------- */
+const $=s=>document.querySelector(s);
+const hm=m=>{m=Math.round(m);m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
+const toMin=s=>{const [h,m]=s.split(":").map(Number);return h*60+m};
+function hav(a,b){const p=Math.PI/180,h=Math.sin((b[0]-a[0])*p/2)**2+Math.cos(a[0]*p)*Math.cos(b[0]*p)*Math.sin((b[1]-a[1])*p/2)**2;return 2*6371*Math.asin(Math.sqrt(h))}
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+const esc0=s=>String(s??"");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------------- network ---------------- */
+const E=[];const OUT={};Object.keys(NODES).forEach(n=>OUT[n]=[]);
+CORR.forEach(([a,b,cls,gcap],i)=>{
+  const L=hav(NODES[a],NODES[b])*1.3,[spd,ccap,lo,hi]=ROAD[cls],cap=gcap||ccap,gate=!!gcap;
+  const nS=(SCHOOLS[a]?.s||0)+(SCHOOLS[a]?.p||0)+(SCHOOLS[b]?.s||0)+(SCHOOLS[b]?.p||0);
+  const local=(cls==="secondary"||cls==="tertiary")&&nS>0;
+  const vcPeak=gate?.3:lo+(hi-lo)*((hashStr(a+b)%100)/100);
+  [[a,b],[b,a]].forEach(([u,v],d)=>{const e={id:E.length,c:i,u,v,cls,L,t0:L/spd*60,cap,vcPeak,local,gate,nS,boost:local?P.schoolBoost*Math.min(1,nS/2):0,name:a+"–"+b};E.push(e);OUT[u].push(e)});
+});
+function profile(m,day){const g=(mu,s)=>Math.exp(-.5*((m-mu)/s)**2);const k=day==="holiday"?.8:1;return .3+.7*Math.max(k*g(450,35),.75*k*g(765,40),g(1065,45))}
+let S={}; // current settings
+function schoolOn(e,m){if(S.day!=="term"||!e.local)return false;return WINDOWS[S.sess].some(([a,b])=>m>=a&&m<b)}
+const tide=(m,pk,sd)=>.15+.85*Math.exp(-.5*((m-pk)/sd)**2);
+function vcAt(e,m,herd){let vc=e.vcPeak*profile(m,S.day)*(S.comm?.8:1);
+  if(S.comm){const k=S.day==="holiday"?.85:1;vc+=k*((S.comm.in[e.id]||0)*tide(m,440,45)+(S.comm.out[e.id]||0)*tide(m,1065,50))/e.cap}if(S.slowSet.has(e.c))vc+=.5;if(schoolOn(e,m))vc+=e.boost;if(herd){const b=Math.floor(m/P.bin);vc+=(herd[e.id]?.[b]||0)*(15/P.bin)/e.cap}return vc}
+function edgeTime(e,m,herd){if(S.closedSet.has(e.c))return Infinity;const vc=vcAt(e,m,herd);return e.t0*(1+P.bpr_a*vc**P.bpr_b)}
+function travel(path,dep,herd,noise){let t=dep;for(const e of path){const x=edgeTime(e,t,herd);t+=x*(noise?noise[e.id]:1)}return t-dep}
+
+/* penalty-method alternative routes */
+function dijkstra(o,d,w){const dist={},prev={},seen=new Set();Object.keys(NODES).forEach(n=>dist[n]=Infinity);dist[o]=0;
+  while(true){let u=null,b=Infinity;for(const n in dist)if(!seen.has(n)&&dist[n]<b){b=dist[n];u=n}if(u===null||u===d)break;seen.add(u);
+    for(const e of OUT[u]){const c=w(e);if(!isFinite(c))continue;if(dist[u]+c<dist[e.v]){dist[e.v]=dist[u]+c;prev[e.v]=e}}}
+  if(!isFinite(dist[d]))return null;const p=[];let n=d;while(n!==o){p.unshift(prev[n]);n=prev[n].u}return p}
+const plen=p=>p.reduce((s,e)=>s+e.L,0);
+function distinct(p,kept){const L=plen(p);return kept.every(q=>{const ids=new Set(q.map(e=>e.c));const own=p.filter(e=>!ids.has(e.c)).reduce((s,e)=>s+e.L,0);return own>=Math.max(P.minKm,P.minShare*L)})}
+function routes(o,d,k=3){const pen={},kept=[];let best=null;
+  for(let i=0;i<25&&kept.length<k;i++){const p=dijkstra(o,d,e=>S.closedSet.has(e.c)?Infinity:e.t0*(pen[e.id]||1));if(!p)break;const L=plen(p);best=best??L;
+    const key=p.map(e=>e.id).join(",");if(L<=best*P.detour&&!kept.some(q=>q.map(e=>e.id).join(",")===key)&&(!kept.length||distinct(p,kept)))kept.push(p);
+    p.forEach(e=>pen[e.id]=(pen[e.id]||1)*1.5)}
+  return kept}
+
+/* fleet wave: congestion-aware greedy assignment of planned trips */
+const routeCache={};
+function cachedRoutes(o,d){const key=o+"|"+d+"|"+S.rKey;return routeCache[key]??=routes(o,d)}
+/* commuters: incremental assignment (4 slices) so flows spread across entry roads as they fill */
+function buildCommuters(){if(!S.commOn)return null;const C={in:{},out:{},zin:{}};const jw=Object.values(JOBS).reduce((a,b)=>a+b,0);
+  for(const dir of ["in","out"]){const F=C[dir];const w=e=>{if(S.closedSet.has(e.c))return Infinity;const vc=(e.vcPeak*.8)+(F[e.id]||0)/e.cap;return e.t0*(1+P.bpr_a*vc**P.bpr_b)};
+    for(let k=0;k<4;k++)for(const z in EXT){const q=EXT[z][2]/4;for(const j in JOBS){const p=dir==="in"?dijkstra(z,j,w):dijkstra(j,z,w);if(!p)continue;
+      for(const e of p){F[e.id]=(F[e.id]||0)+q*JOBS[j]/jw;if(dir==="in"){(C.zin[e.id]??={})[z]=(C.zin[e.id][z]||0)+q*JOBS[j]/jw}}}}}
+  return C}
+function topZone(e){const z=S.comm?.zin[e.id];if(!z)return null;let best=null,bv=0;for(const k in z)if(z[k]>bv){bv=z[k];best=k}return best}
+function buildHerd(){const herd={};if(!S.fleet)return herd;const r=rng(7+hashStr(S.rKey)+(S.day==="term"?0:100));
+  const dests=Object.entries(DESTS),tot=dests.reduce((s,[,w])=>s+w,0);
+  const trips=[];for(let i=0;i<P.fleet;i++){const hub=r()<HUBS[0][1]?HUBS[0][0]:HUBS[1][0];let x=r()*tot,dst=dests[0][0];for(const [n,w] of dests){if((x-=w)<0){dst=n;break}}if(dst===hub)continue;trips.push({hub,dst,dep:P.waveStart+r()*P.waveMin})}
+  trips.sort((a,b)=>a.dep-b.dep);
+  for(const t of trips){const rs=cachedRoutes(t.hub,t.dst);if(!rs.length)continue;let best=null,bt=Infinity;for(const p of rs){const x=travel(p,t.dep,herd);if(x<bt){bt=x;best=p}}
+    let m=t.dep;for(const e of best){const b=Math.floor(m/P.bin);(herd[e.id]??={})[b]=(herd[e.id][b]||0)+1;m+=edgeTime(e,m,herd)}}
+  return herd}
+
+/* advice */
+function advise(){
+  const o=S.from,d=S.to;if(o===d)return {err:"Start and destination are in the same area ("+o+"). This advisor works between areas; for a trip this short, just go."};
+  const rs=routes(o,d);if(!rs.length)return {err:"No route found with that road closed. Try another closure setting."};
+  const arr=S.arriveBy,r=rng(hashStr(o+d+arr+S.day+S.rKey+S.fleet+S.sess));
+  const sampleNoise=()=>{const common=Math.exp(.6*P.sigma*gauss(r)),n={};for(const e of E)n[e.id]=common*Math.exp(.8*P.sigma*gauss(r));return n};
+  const noises=Array.from({length:P.mc},sampleNoise);
+  const out=rs.map((p,i)=>{
+    const free=p.reduce((s,e)=>s+e.t0,0),deps=[];
+    for(let dep=arr-Math.ceil(free*3/5)*5-30;dep<=arr-2;dep+=1){const ts=noises.map(n=>travel(p,dep,S.herd,n)).sort((a,b)=>a-b);const pl=ts.filter(t=>dep+t>arr).length/ts.length;deps.push({dep,pl,ts})}
+    let pick=null;for(const x of deps)if(x.pl<=1-S.conf)pick=x;const ok=!!pick;if(!pick)pick=deps[0];
+    const q=f=>pick.dep+pick.ts[Math.min(pick.ts.length-1,Math.floor(f*pick.ts.length))];
+    let m=pick.dep;const schools=[],busy=[];
+    for(const e of p){if(schoolOn(e,m))schools.push({e,m});const b=Math.floor(m/P.bin);let h=0;for(let k=b-3;k<=b+3;k++)h+=S.herd[e.id]?.[k]||0;busy.push({e,h,m,vc:vcAt(e,m,S.herd)});m+=edgeTime(e,m,S.herd)}
+    const via=p.slice(0,-1).map(e=>e.v);
+    return {i,p,via,km:plen(p),leave:pick.dep,ok,pl:pick.pl,lo:q(.1),mid:q(.5),hi:q(.9),schools,busy,herdMax:Math.max(0,...busy.map(b=>b.h)),typical:pick.ts[Math.floor(pick.ts.length/2)]}});
+  const okR=out.filter(x=>x.ok);const pool=okR.length?okR:out;
+  pool.sort((a,b)=>b.leave-a.leave||a.schools.length-b.schools.length||a.pl-b.pl);
+  /* only send people a different way when it is worth it: at least 3 minutes later departure, or clearly safer */
+  let best=pool[0];const f=out[0];let kept=false;
+  if(best!==f&&f.ok&&best.leave-f.leave<3&&f.pl-best.pl<.05){best=f;kept=true}
+  return {routes:out,best,fastest:f,kept,gain:best===f?0:best.leave-f.leave};
+}
+
+/* ---------------- map ---------------- */
+const W=560,H=470,pad=46;let MAPVIEW="city",la0,la1,lo0,lo1,STUB={};
+const LL2XY=([la,lo])=>[92+(lo-lo0)/(lo1-lo0)*(W-184),pad+(la1-la)/(la1-la0)*(H-2*pad)];
+function setView(v){MAPVIEW=v;const pts=Object.values(v==="city"?AREAS:NODES);const lats=pts.map(a=>a[0]),lons=pts.map(a=>a[1]);
+  [la0,la1,lo0,lo1]=[Math.min(...lats),Math.max(...lats),Math.min(...lons),Math.max(...lons)];STUB={};
+  if(v==="city")for(const z in EXT){const g=EXT[z][3][0][0],[gx,gy]=LL2XY(AREAS[g]),[tx,ty]=LL2XY(NODES[z]);const dx=tx-gx,dy=ty-gy,L=Math.hypot(dx,dy)||1;
+    STUB[z]=[Math.min(W-14,Math.max(14,gx+dx/L*62)),Math.min(H-14,Math.max(14,gy+dy/L*62))]}
+  document.querySelectorAll("[data-view]").forEach(b=>{const on=b.dataset.view===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
+setView("city");
+const XY=n=>STUB[n]||LL2XY(NODES[n]);
+const XY2LL=(x,y)=>[la1-(y-pad)/(H-2*pad)*(la1-la0),lo0+(x-92)/(W-184)*(lo1-lo0)];
+const LBL={"City Centre":[-6,-10,"end"],"Padungan":[0,-12,"middle"],"Pending":[0,-12,"middle"],"Satok":[-9,-6,"end"],"Batu Lintang":[-10,16,"end"],"Kenyalang":[10,-4,"start"],"Simpang Tiga":[10,4,"start"],"Hui Sing":[-10,4,"end"],"Stutong":[10,14,"start"],"Tabuan Jaya":[0,20,"middle"],"Bintawa":[10,-6,"start"],"Petra Jaya":[0,-12,"middle"],"Matang":[-9,-6,"end"],"Batu Kawa":[-10,4,"end"],"Airport":[10,4,"start"],"Kota Sentosa":[10,4,"start"]};
+function drawMap(res,mt){
+  const best=res?.best,on=new Set(best?best.p.map(e=>e.c):[]);let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schematic corridor map of Kuching">`;
+  s+=`<path d="M0 ${H*.28} C ${W*.3} ${H*.22}, ${W*.45} ${H*.36}, ${W*.62} ${H*.25} S ${W*.9} ${H*.14}, ${W} ${H*.2}" stroke="var(--water)" stroke-width="16" fill="none" opacity=".7"/>`;
+  CORR.forEach(([a,b,cls],i)=>{const e=E[i*2],[x1,y1]=XY(a),[x2,y2]=XY(b);const vc=Math.max(vcAt(E[i*2],mt,S.herd),vcAt(E[i*2+1],mt,S.herd));
+    const sch=schoolOn(e,mt),closed=S.closedSet.has(i);const w=cls==="trunk"||cls==="primary"?6:4;const col=closed||vc>.85?"var(--slow)":"var(--road)";
+    const tip=`<title>${esc(a+"–"+b)} (${cls}) · ${Math.round(vc*100)}% full at ${hm(mt)}${sch?" · school release":""}${closed?" · closed":""}</title>`;
+    s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"${closed?' stroke-dasharray="2 7"':""}>${tip}</line>`;
+    if(sch&&!closed)s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--school)" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round">${tip}</line>`});
+  if(best){const pts=[XY(best.p[0].u),...best.p.map(e=>XY(e.v))];s+=`<polyline points="${pts.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`}
+  Object.keys(EXT).forEach(z=>{const [x,y]=XY(z),end=z===S.from||z===S.to;
+    s+=`<rect x="${x-6}" y="${y-6}" width="12" height="12" rx="2" fill="${end?"var(--accent)":"var(--sunk)"}" stroke="${end?"var(--accent)":"var(--muted)"}" stroke-width="1.5"><title>${esc(z)}: ${esc(EXT_NOTE[z])}. About ${EXT[z][2]} vehicles per 15 min head into town at the morning peak (assumed).</title></rect>`;
+    const up=y<H/2,left=x<W/2;s+=`<text x="${x}" y="${y+(up?-11:20)}" text-anchor="${MAPVIEW==="greater"?"middle":left?"start":"end"}" font-size="${MAPVIEW==="greater"?13:11.5}" font-style="italic" font-family="IBM Plex Sans, system-ui, sans-serif" fill="var(--muted)" font-weight="${end?700:500}" paint-order="stroke" stroke="var(--surface)" stroke-width="3">${esc(z)}</text>`});
+  Object.keys(AREAS).forEach(n=>{const [x,y]=XY(n),end=n===S.from||n===S.to,hub=HUBS.some(h=>h[0]===n);if(MAPVIEW==="greater"&&!end&&!hub&&!["City Centre","Batu Kawa","Petra Jaya","Airport","Stutong"].includes(n)){s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"><title>${esc(n)}</title></circle>`;return}
+    s+=`<circle cx="${x}" cy="${y}" r="${end?7:4.5}" fill="${end?"var(--accent)":"var(--surface)"}" stroke="${end?"var(--accent)":"var(--muted)"}" stroke-width="2"/>`;
+    const [dx,dy,an]=LBL[n]||[9,-8,"start"];s+=`<text x="${x+dx}" y="${y+dy}" text-anchor="${an}" font-size="12" font-family="IBM Plex Sans, system-ui, sans-serif" fill="var(--fg)" font-weight="${end?700:500}" paint-order="stroke" stroke="var(--surface)" stroke-width="3">${esc(n)}${hub?" (depot)":""}</text>`});
+  [["from",S.fromEnd],["to",S.toEnd]].forEach(([k,ep])=>{if(!ep||!ep.ll)return;const [x,y]=LL2XY(ep.ll);
+    s+=`<g><path d="M${x} ${y} l-8 -14 a9 9 0 1 1 16 0 z" fill="${k==="from"?"var(--fg)":"var(--accent)"}" stroke="var(--surface)" stroke-width="1.5"/><circle cx="${x}" cy="${y-17}" r="3.2" fill="var(--surface)"/><title>${k==="from"?"Start":"Destination"}: ${esc(ep.label)} (advice uses ${esc(ep.area)})</title></g>`});
+  s+="</svg>";$("#mapBox").innerHTML=s;$("#mapBox svg").classList.toggle("pinning",!!PINMODE);$("#mapTimeLbl").textContent=hm(mt)}
+
+/* ---------------- maps link + message ---------------- */
+function mapsUrl(res){const b=res.best,f=res.fastest;const ll=n=>NODES[n].join(",");
+  const llOf=ep=>ep.ll?ep.ll.map(v=>v.toFixed(5)).join(","):ll(ep.area);
+  /* add a stop only when we send people a different way than the usual fastest road; Maps finds the usual road by itself */
+  const fastNodes=new Set(f.via);const wp=b===f?null:(b.via.find(n=>!fastNodes.has(n))||null);
+  const plain="https://www.google.com/maps/dir/?api=1"+(S.fromEnd.here?"":"&origin="+encodeURIComponent(llOf(S.fromEnd)))+"&destination="+encodeURIComponent(llOf(S.toEnd))+"&travelmode=driving";
+  return {u:wp?plain+"&waypoints="+encodeURIComponent(ll(wp)):plain,plain,wp}}
+function message(res){const b=res.best;const slow=b.busy.filter(x=>x.vc>.85).map(x=>x.e.name);
+  let m=`Leave ${S.fromEnd.here?"by":esc0(S.fromEnd.label)+" by"} ${hm(b.leave)} to reach ${esc0(S.toEnd.label)} by ${hm(S.arriveBy)}.\nGo via ${b.via.length?b.via.join(", "):"the direct road"}.`;
+  if(b.schools.length)m+=`\nSchool traffic near ${[...new Set(b.schools.map(s=>s.e.name))].join(", ")}.`;
+  if(slow.length)m+=`\nSlow: ${[...new Set(slow)].join(", ")}.`;
+  const rep=b.p.filter(e=>S.slowSet.has(e.c)).map(e=>e.name);if(rep.length)m+=`\nReported jam: ${[...new Set(rep)].join(", ")}.`;
+  m+=`\nYou should arrive around ${hm(b.mid)}. Chance of being late: about ${Math.round(b.pl*100)}%.`;return m}
+
+/* ---------------- render plan ---------------- */
+let RES=null;
+function readS(){const keep={herd:S.herd,comm:S.comm,herdKey:S.herdKey};
+  const fromEnd=resolveEnd("from"),toEnd=resolveEnd("to"),act=activeReports();
+  const closedSet=new Set(act.filter(r=>r.kind==="closed").map(r=>r.c)),slowSet=new Set(act.filter(r=>r.kind==="slow").map(r=>r.c));
+  S={from:fromEnd.area,to:toEnd.area,fromEnd,toEnd,closedSet,slowSet,rKey:[...closedSet].sort().join(".")+"/"+[...slowSet].sort().join("."),arriveBy:toMin($("#arriveBy").value||"07:30"),day:$("#dayType").value,conf:+document.querySelector('input[name="conf"]:checked').value,
+     fleet:$("#fleetOn").value==="1",sess:$("#sessAssume").value,commOn:$("#commOn").value==="1"};
+  const hk=[S.day,S.rKey,S.fleet,S.sess,S.commOn].join("|");if(keep.herdKey===hk){S.herd=keep.herd;S.comm=keep.comm;S.herdKey=hk}else{S.herd={};S.comm=buildCommuters();S.herd=buildHerd();S.herdKey=hk}}
+function render(){readS();RES=advise();const A=$("#advice");
+  if(RES.err){A.innerHTML=`<h2>Advice</h2><p>${esc(RES.err)}</p>`;$("#routesTable tbody").innerHTML="";drawMap(null,+$("#mapTime").value);return}
+  const b=RES.best,{u,plain,wp}=mapsUrl(RES),plc=b.pl<=.1?"ok":b.pl<=.25?"warn":"bad";
+  const notes=[];
+  if(!b.ok)notes.push(`<li><span class="ic slow"></span><span>No leave time in the last ${Math.round((S.arriveBy-b.leave))} minutes reaches ${Math.round(S.conf*100)}% confidence. This is the earliest option checked.</span></li>`);
+  [...new Map(b.schools.map(s=>[s.e.c,s])).values()].forEach(s=>{const a=SCHOOLS[s.e.u]||{s:0,p:0},c=SCHOOLS[s.e.v]||{s:0,p:0};notes.push(`<li><span class="ic school"></span><span><b>${esc(s.e.name)}</b>: school drop-off or pick-up when you pass (~${hm(s.m)}), ${a.s+a.p+c.s+c.p} schools nearby. School hours not confirmed yet.</span></li>`)});
+  if(!b.schools.length&&S.day==="term")notes.push(`<li><span class="ic ok"></span><span>No school drop-off or pick-up on this route at your time.</span></li>`);
+  const act=activeReports();act.filter(r=>r.kind==="closed").forEach(r=>notes.push(`<li><span class="ic slow"></span><span>Avoiding <b>${esc(CORR[r.c][0]+"–"+CORR[r.c][1])}</b>: reported closed at ${esc(new Date(r.at).toTimeString().slice(0,5))}.</span></li>`));
+  b.p.filter(e=>S.slowSet.has(e.c)).forEach(e=>notes.push(`<li><span class="ic slow"></span><span><b>${esc(e.name)}</b> has a reported jam. Included in the times above.</span></li>`));
+  const slow=b.busy.filter(x=>x.vc>.85);slow.forEach(x=>{const z=topZone(x.e);const share=S.comm?((S.comm.in[x.e.id]||0)*tide(x.m,440,45)+(S.comm.out[x.e.id]||0)*tide(x.m,1065,50))/x.e.cap/x.vc:0;
+    notes.push(`<li><span class="ic slow"></span><span><b>${esc(x.e.name)}</b> is busy (${Math.round(x.vc*100)}% full) when you pass${share>.3&&z?`, about ${Math.round(share*100)}% of it traffic coming in from ${esc(z)} and other areas outside Kuching`:""}.</span></li>`)});
+  const avoided=RES.fastest!==b?RES.fastest.herdMax:0;
+  if(b.herdMax>0||avoided>0)notes.push(`<li><span class="ic herd"></span><span>${b.herdMax} other trips planned through this app use a road on this route around your time${avoided>b.herdMax?`; the shortest route has ${avoided}`:""}.</span></li>`);
+  A.innerHTML=`
+    <div class="leave"><span class="lbl">Leave by</span><span class="big">${hm(b.leave)}</span><span class="pill ${plc}">${Math.round(b.pl*100)}% chance of being late</span></div>
+    <div class="via">${esc(S.fromEnd.label)} → ${b.via.map(esc).join(" → ")}${b.via.length?" → ":""}${esc(S.toEnd.label)}</div>
+    ${(S.fromEnd.ll||S.fromEnd.here||S.toEnd.ll)?`<p class="hint">Advice is worked out from ${esc(S.from)} to ${esc(S.to)} area centres; the Maps link uses your exact ${S.fromEnd.here?"position":"points"}.</p>`:""}
+    <div class="facts">
+      <div class="fact"><div class="k">Arrive between</div><div class="v">${hm(b.lo)}–${hm(b.hi)}</div></div>
+      <div class="fact"><div class="k">Most likely</div><div class="v">${hm(b.mid)}</div></div>
+      <div class="fact"><div class="k">Distance</div><div class="v">${b.km.toFixed(1)} km</div></div>
+    </div>
+    <ul class="notes">${notes.join("")}</ul>
+    <div class="actions"><a class="btn" id="openMaps" href="${esc(u)}" target="_blank" rel="noopener">Open in Google Maps</a>${wp?`<a class="btn ghost" href="${esc(plain)}" target="_blank" rel="noopener">Open without the extra stop</a>`:""}<button class="btn ghost" type="button" id="copyMsg">Copy message</button><button class="btn ghost" type="button" id="goTest">Log as test trip</button></div>
+    <p class="hint">${wp?`This way avoids the usual road and lets you leave ${RES.gain} min later, so the link adds a stop at <b>${esc(wp)}</b> to make Google Maps follow it. The stop is placed at the area's centre point for now, so Maps may turn into a side street there; if that happens, use the link without the stop and follow the road names above.`:RES.kept?"Another way was only slightly quicker, so we kept the usual road. Google Maps picks the exact streets.":"This is the usual road, so the link has no extra stop. Google Maps picks the exact streets."} We tried the trip ${P.mc} times with different made-up traffic; 8 in 10 tries arrived within the range shown.</p>
+    <div><div class="hint" style="margin-bottom:6px">Message for someone who doesn't use maps (WhatsApp or SMS)</div><div class="msgbox" id="msg">${esc(message(RES))}</div></div>`;
+  $("#copyMsg").onclick=()=>copy($("#msg").textContent,$("#msg"));
+  $("#goTest").onclick=()=>showTab("test");
+  $("#routesTable tbody").innerHTML=RES.routes.map(r=>`<tr class="${r===b?"chosen":""}"><td>${r.via.length?r.via.map(esc).join(" → "):"direct"}${r===b?' <span class="pill info">advised</span>':""}</td><td class="num">${r.km.toFixed(1)}</td><td class="num">${r.ok?hm(r.leave):"—"}</td><td class="num">${Math.round(r.typical)} min</td><td class="num">${Math.round(r.pl*100)}%</td><td class="num">${new Set(r.schools.map(s=>s.e.c)).size}</td><td class="num">${r.herdMax}</td></tr>`).join("");
+  const mt=Math.max(360,Math.min(1200,Math.round(b.leave/5)*5));$("#mapTime").value=mt;drawMap(RES,mt);
+}
+function copy(text,el){const done=()=>toast("Copied");try{navigator.clipboard.writeText(text).then(done,()=>sel(el))}catch(e){sel(el)}}
+function sel(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected. Press copy on your keyboard.")}
+let tt;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------------- setup ---------------- */
+const names=Object.keys(AREAS);
+/* ---- endpoints: current location, pins, saved places (no accounts; saved on this device) ---- */
+let PINMODE=null;const PIN={from:null,to:null};let SAVED=[];
+try{SAVED=JSON.parse(localStorage.getItem("kta-places")||"[]").filter(x=>x&&x.name&&Array.isArray(x.ll))}catch(e){SAVED=[]}
+const storeSaved=()=>{try{localStorage.setItem("kta-places",JSON.stringify(SAVED))}catch(e){}};
+function nearest(ll){let best=null,bd=Infinity;for(const n in NODES){const d=hav(ll,NODES[n]);if(d<bd){bd=d;best=n}}return best}
+function fillEnds(){["from","to"].forEach(k=>{const el=$("#"+k),cur=el.value||(k==="from"?"area:Pending":"area:Batu Lintang");
+  let h="";if(k==="from")h+=`<option value="here">My current location</option>`;
+  if(PIN[k])h+=`<option value="pin">Pinned spot (near ${esc(PIN[k].area)})</option>`;
+  if(SAVED.length)h+=`<optgroup label="Saved places">${SAVED.map((p,i)=>`<option value="saved:${i}">${esc(p.name)}</option>`).join("")}</optgroup>`;
+  h+=`<optgroup label="Kuching areas">${names.map(n=>`<option value="area:${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`;
+  h+=`<optgroup label="Around Kuching">${Object.keys(EXT).map(n=>`<option value="area:${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`;
+  el.innerHTML=h;el.value=[...el.options].some(o=>o.value===cur)?cur:(k==="from"?"area:Pending":"area:Batu Lintang")});
+  $("#nearRow").hidden=$("#from").value!=="here";
+  $("#savedList").innerHTML=SAVED.map((p,i)=>`<li><span><b>${esc(p.name)}</b> · near ${esc(p.area)}</span><button type="button" class="btn small danger" data-del="${i}">Remove</button></li>`).join("")||`<li><span class="hint">No saved places yet. Pick or pin a destination, then press "Save destination".</span></li>`}
+function resolveEnd(k){const v=$("#"+k).value||"";
+  if(v==="here")return {here:true,area:$("#near").value,ll:null,label:"your location"};
+  if(v==="pin"&&PIN[k])return {area:PIN[k].area,ll:PIN[k].ll,label:"pinned spot"};
+  if(v.startsWith("saved:")){const p=SAVED[+v.slice(6)];if(p)return {area:p.area,ll:p.ll,label:p.name}}
+  const n=v.startsWith("area:")?v.slice(5):"Pending";return {area:NODES[n]?n:"Pending",ll:null,label:NODES[n]?n:"Pending"}}
+function setPin(k,ll){PIN[k]={ll,area:nearest(ll)};fillEnds();$("#"+k).value="pin";$("#nearRow").hidden=$("#from").value!=="here";render()}
+$("#near").innerHTML=[...names,...Object.keys(EXT)].map(n=>`<option${n==="Pending"?" selected":""}>${esc(n)}</option>`).join("");
+fillEnds();
+function setPinMode(k){PINMODE=PINMODE===k?null:k;["From","To"].forEach(x=>{const on=PINMODE===x.toLowerCase();$("#pin"+x).classList.toggle("on",on);$("#pin"+x).setAttribute("aria-pressed",on)});
+  $("#pinHint").hidden=!PINMODE;$("#mapBox svg")?.classList.toggle("pinning",!!PINMODE);if(PINMODE&&innerWidth<860)$("#mapBox").scrollIntoView({behavior:"smooth",block:"center"})}
+$("#pinFrom").onclick=()=>setPinMode("from");$("#pinTo").onclick=()=>setPinMode("to");
+$("#mapBox").addEventListener("click",e=>{if(!PINMODE)return;const svg=$("#mapBox svg");if(!svg)return;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());
+  const k=PINMODE;setPinMode(null);setPin(k,XY2LL(q.x,q.y));toast((k==="from"?"Start":"Destination")+" pinned near "+PIN[k].area)});
+$("#saveToggle").onclick=()=>{$("#saveRow").hidden=!$("#saveRow").hidden;if(!$("#saveRow").hidden)$("#placeName").focus()};
+$("#savePlace").onclick=()=>{const name=$("#placeName").value.trim();if(!name){toast("Give the place a name");return}const ep=resolveEnd("to");
+  SAVED.push({name,ll:ep.ll||NODES[ep.area],area:ep.area});storeSaved();$("#placeName").value="";$("#saveRow").hidden=true;fillEnds();$("#to").value="saved:"+(SAVED.length-1);render();toast("Saved on this device")};
+$("#savedList").addEventListener("click",e=>{const b=e.target.closest("[data-del]");if(!b)return;SAVED.splice(+b.dataset.del,1);storeSaved();fillEnds();render()});
+function parseLL(t){t=t.trim();try{t=decodeURIComponent(t)}catch(e){}
+  if(/goo\.gl|maps\.app/.test(t))return {err:"Short share links can't be read here. Open the link, then copy the coordinates (tap and hold the spot in Maps)."};
+  const pats=[/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|query|ll|destination|origin)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/];
+  for(const re of pats){const m=t.match(re);if(m){const ll=[+m[1],+m[2]];if(ll[0]<1.35||ll[0]>1.7||ll[1]<110.15||ll[1]>110.55)return {err:"That spot is outside the Kuching area this advisor covers."};return {ll}}}
+  return {err:"No coordinates found. Paste coordinates like 1.5402, 110.3448 or a full Google Maps link."}}
+$("#pasteUse").onclick=()=>{const r=parseLL($("#paste").value);if(r.err){toast(r.err);return}const k=$("#pasteFor").value;setPin(k,r.ll);$("#paste").value="";toast((k==="from"?"Start":"Destination")+" set near "+PIN[k].area)};
+$("#from").addEventListener("change",()=>{$("#nearRow").hidden=$("#from").value!=="here"});
+/* ---- road reports (shared; fall back to this view only) ---- */
+let REPORTS=[];const REPORT_MS=2*3600e3;
+const activeReports=()=>REPORTS.filter(r=>Date.parse(r.expires)>Date.now()&&CORR[r.c]);
+$("#repRoad").innerHTML=CORR.map(([a,b],i)=>`<option value="${i}">${esc(a+"–"+b)}</option>`).sort((x,y)=>x.localeCompare(y)).join("");
+function renderReports(){const act=activeReports();$("#repList").innerHTML=act.length?act.map(r=>`<li><span><span class="pill ${r.kind==="closed"?"bad":"warn"}">${r.kind==="closed"?"Closed":"Jam"}</span> <b>${esc(CORR[r.c][0]+"–"+CORR[r.c][1])}</b> · ${esc(new Date(r.at).toTimeString().slice(0,5))}${r.by?" by "+esc(r.by):""}</span><button type="button" class="btn small ghost" data-clear="${esc(r.id)}">Clear</button></li>`).join(""):`<li><span class="hint">No active reports.</span></li>`}
+$("#repAdd").onclick=async()=>{const now=Date.now(),r={c:+$("#repRoad").value,kind:$("#repKind").value,at:new Date(now).toISOString(),expires:new Date(now+REPORT_MS).toISOString(),by:($("#nick").value||"").trim().slice(0,24)};
+  if(DB){try{await DB.collection("reports").add(r);toast("Reported. Advice updated.")}catch(err){toast("Couldn't report: "+(err.message||err.code))}}
+  else{REPORTS.push({id:"local"+now,...r});renderReports();render();toast("Reported in this view only")}};
+$("#repList").addEventListener("click",async e=>{const b=e.target.closest("[data-clear]");if(!b)return;const id=b.dataset.clear;
+  if(DB&&!id.startsWith("local")){try{await DB.collection("reports").doc(id).delete();toast("Report cleared")}catch(err){toast("Couldn't clear: "+(err.message||err.code))}}
+  else{REPORTS=REPORTS.filter(r=>r.id!==id);renderReports();render()}});
+setInterval(()=>{const before=S.rKey;renderReports();readS();if(S.rKey!==before)render()},60000);
+renderReports();
+document.querySelectorAll("#planForm select, #arriveBy, input[name=conf]").forEach(el=>el.addEventListener("change",render));
+$("#planForm").addEventListener("submit",e=>e.preventDefault());
+$("#mapTime").addEventListener("input",e=>drawMap(RES&&!RES.err?RES:null,+e.target.value));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{setView(b.dataset.view);drawMap(RES&&!RES.err?RES:null,+$("#mapTime").value)}));
+["from","to"].forEach(k=>$("#"+k).addEventListener("change",()=>{const n=resolveEnd(k).area;if(EXT[n]&&MAPVIEW!=="greater"){setView("greater");drawMap(RES&&!RES.err?RES:null,+$("#mapTime").value)}}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&PINMODE)setPinMode(null)});
+function showTab(t){["plan","test"].forEach(x=>{$("#tab-"+x).setAttribute("aria-selected",x===t);$("#view-"+x).hidden=x!==t})}
+$("#tab-plan").onclick=()=>showTab("plan");$("#tab-test").onclick=()=>showTab("test");
+if(location.hash==="#test")showTab("test");
+const today=new Date();$("#testDate").value=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+try{const n=localStorage.getItem("kta-nick");if(n)$("#nick").value=n}catch(e){}
+$("#nick").addEventListener("change",()=>{try{localStorage.setItem("kta-nick",$("#nick").value.trim())}catch(e){}});
+render();
+
+/* ---------------- practical test log (shared db) ---------------- */
+let DB=null,TRIPS=[];
+function renderLog(){
+  const nick=$("#nick").value.trim();
+  const open=TRIPS.filter(t=>!t.result&&(!nick||t.tester===nick));
+  $("#openTrips").innerHTML=open.length?open.map(t=>`
+    <div class="trip" data-id="${esc(t.id)}">
+      <div class="t"><span>${esc(t.date)} · ${esc(t.from)} → ${esc(t.to)}</span><span class="pill ${t.mode==="follow"?"info":"warn"}">${t.mode==="follow"?"Follow advice":"Usual way"}</span></div>
+      <div class="hint">Advised: leave ${esc(t.plan.leave)}, arrive ${esc(t.plan.etaLo)}–${esc(t.plan.etaHi)} via ${esc(t.plan.via)}. Arrive by ${esc(t.arriveBy)}. Tester: ${esc(t.tester)}</div>
+      <div class="row">
+        <label class="f" for="al-${esc(t.id)}">Actually left<input type="time" id="al-${esc(t.id)}"></label>
+        <label class="f" for="aa-${esc(t.id)}">Actually arrived<input type="time" id="aa-${esc(t.id)}"></label>
+      </div>
+      <div class="row">
+        <label class="f" for="wk-${esc(t.id)}">Did Maps keep the extra stop?<select id="wk-${esc(t.id)}"><option value="">Choose</option><option value="yes">Yes</option><option value="detour">Kept it, but made an odd detour</option><option value="no">No, it dropped it</option><option value="none">No stop in the link</option><option value="notused">Didn't use the link</option></select></label>
+        <label class="f" for="ap-${esc(t.id)}">Navigation app<select id="ap-${esc(t.id)}"><option>Google Maps</option><option>Waze</option><option>None</option><option>Other</option></select></label>
+      </div>
+      <label class="f" for="nt-${esc(t.id)}">Notes (route actually taken, jams, anything odd)<textarea id="nt-${esc(t.id)}" rows="2"></textarea></label>
+      <div class="actions"><button class="btn small" type="button" data-act="save">Save result</button><button class="btn small danger" type="button" data-act="del">Remove trip</button><span class="hint" data-confirm hidden>Remove this trip? <button class="btn small danger" type="button" data-act="del2">Yes, remove</button></span></div>
+    </div>`).join(""):`<div class="empty">${nick?`No open trips for ${esc(nick)}.`:"No open trips."} Plan a trip, then press "Save current plan as a test trip" before you leave.</div>`;
+  const rows=[...TRIPS].sort((a,b)=>(b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  $("#logTable tbody").innerHTML=rows.length?rows.map(t=>{const r=t.result;let err="",on="";
+    if(r&&r.actualArrive&&r.actualLeave){const pred=toMin(r.actualLeave)+(toMin(t.plan.etaMid)-toMin(t.plan.leave));const e=toMin(r.actualArrive)-pred;err=(e>0?"+":"")+e+" min";on=toMin(r.actualArrive)<=toMin(t.arriveBy)?'<span class="pill ok">Yes</span>':'<span class="pill bad">Late</span>'}
+    return `<tr><td>${esc(t.date)}</td><td>${esc(t.tester)}</td><td>${esc(t.from)} → ${esc(t.to)}</td><td>${t.mode==="follow"?"Follow":"Usual"}</td><td class="num">${esc(t.plan.leave)}</td><td class="num">${esc(r?.actualLeave||"—")}</td><td class="num">${esc(t.plan.etaMid)}</td><td class="num">${esc(r?.actualArrive||"—")}</td><td class="num">${err||"—"}</td><td>${on||(r?"—":'<span class="pill warn">Open</span>')}</td><td>${esc({yes:"Yes",detour:"Odd detour",no:"No",none:"No stop",notused:"Not used"}[r?.waypointKept]||"—")}</td></tr>`}).join(""):`<tr><td colspan="11" class="hint">No test trips yet. The first saved plan will appear here.</td></tr>`;
+  // stats
+  const done=TRIPS.filter(t=>t.result?.actualArrive&&t.result?.actualLeave);
+  const onTime=a=>a.length?Math.round(100*a.filter(t=>toMin(t.result.actualArrive)<=toMin(t.arriveBy)).length/a.length)+"%":"—";
+  const f=done.filter(t=>t.mode==="follow"),u=done.filter(t=>t.mode==="usual");
+  const errs=done.map(t=>Math.abs(toMin(t.result.actualArrive)-(toMin(t.result.actualLeave)+toMin(t.plan.etaMid)-toMin(t.plan.leave)))).sort((a,b)=>a-b);
+  const inRange=done.filter(t=>{const d=toMin(t.result.actualArrive)-toMin(t.result.actualLeave),lo=toMin(t.plan.etaLo)-toMin(t.plan.leave),hi=toMin(t.plan.etaHi)-toMin(t.plan.leave);return d>=lo&&d<=hi}).length;
+  const wps=TRIPS.filter(t=>["yes","no","detour"].includes(t.result?.waypointKept));
+  const st=[["Trips done",done.length,`${TRIPS.length-done.length} still open`],["On time: follow vs usual",`${onTime(f)} / ${onTime(u)}`,`${f.length} follow, ${u.length} usual`],["Usual time error",errs.length?errs[Math.floor(errs.length/2)]+" min":"—",errs.length?`${Math.round(100*inRange/done.length)}% inside the predicted range`:"counted from when you actually left"],["Maps kept our route",wps.length?Math.round(100*wps.filter(t=>t.result.waypointKept==="yes").length/wps.length)+"%":"—",`out of ${wps.length} trips with a stop; ${wps.filter(t=>t.result.waypointKept==="detour").length} odd detours`]];
+  $("#stats").innerHTML=st.map(([k,v,s])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+}
+$("#openTrips").addEventListener("click",async e=>{const btn=e.target.closest("button[data-act]");if(!btn||!DB)return;const card=btn.closest(".trip"),id=card.dataset.id;
+  if(btn.dataset.act==="del"){card.querySelector("[data-confirm]").hidden=false;return}
+  if(btn.dataset.act==="del2"){try{await DB.collection("trips").doc(id).delete();toast("Trip removed")}catch(err){toast("Couldn't remove: "+(err.message||err.code))}return}
+  const v=s=>card.querySelector(s+"-"+CSS.escape(id))?.value||"";
+  const al=$("#al-"+CSS.escape(id)).value,aa=$("#aa-"+CSS.escape(id)).value;
+  if(!al||!aa){toast("Fill in when you left and arrived");return}
+  try{await DB.collection("trips").doc(id).update({result:{actualLeave:al,actualArrive:aa,waypointKept:$("#wk-"+CSS.escape(id)).value,app:$("#ap-"+CSS.escape(id)).value,notes:$("#nt-"+CSS.escape(id)).value.slice(0,500),doneAt:new Date().toISOString()}});toast("Result saved")}catch(err){toast("Couldn't save: "+(err.message||err.code))}});
+$("#saveTrip").onclick=async()=>{
+  const nick=$("#nick").value.trim();if(!nick){toast("Add a tester nickname first");$("#nick").focus();return}
+  if(!DB){toast("The shared test log isn't available in this view");return}
+  if(!RES||RES.err){toast("Plan a valid trip first");return}
+  const b=RES.best,{u,wp}=mapsUrl(RES);
+  const doc={tester:nick,date:$("#testDate").value,createdAt:new Date().toISOString(),from:S.from,to:S.to,fromKind:S.fromEnd.here?"current location":S.fromEnd.ll?"pin/saved":"area",toKind:S.toEnd.ll?"pin/saved":"area",arriveBy:hm(S.arriveBy),dayType:S.day,confidence:S.conf,reports:activeReports().map(r=>(r.kind==="closed"?"closed: ":"jam: ")+CORR[r.c][0]+"–"+CORR[r.c][1]),mode:document.querySelector('input[name="mode"]:checked').value,
+    plan:{leave:hm(b.leave),via:b.via.join(" → ")||"direct",pLate:Math.round(b.pl*100)/100,etaLo:hm(b.lo),etaMid:hm(b.mid),etaHi:hm(b.hi),km:Math.round(b.km*10)/10,waypoint:wp||"",mapsUrl:u,schoolZones:new Set(b.schools.map(s=>s.e.c)).size,fleetTrips:b.herdMax},result:null};
+  try{await DB.collection("trips").add(doc);toast("Saved. Fill in the result after the trip.")}catch(err){toast("Couldn't save: "+(err.message||err.code))}};
+$("#nick").addEventListener("input",renderLog);
+renderLog();
+(async()=>{try{DB=await window.claude?.use?.("db")}catch(e){DB=null}
+  if(!DB){$("#dbState").textContent="The shared test log isn't available in this view. Planning still works.";$("#saveTrip").disabled=true;$("#repState").textContent="Reports stay in this view only here. They last 2 hours.";return}
+  DB.collection("reports").orderBy("at","desc").limit(200).onSnapshot(s=>{REPORTS=s.docs.map(d=>({id:d.id,...d.data()})).filter(r=>typeof r.c==="number"&&r.expires);renderReports();render()},()=>{});
+  $("#dbState").textContent="Connected. Trips are shared with everyone who opens this page; only nicknames are stored.";
+  DB.collection("trips").orderBy("createdAt","desc").limit(500).onSnapshot(s=>{TRIPS=s.docs.map(d=>({id:d.id,...d.data()})).filter(t=>t.plan);renderLog()},err=>{$("#dbState").textContent="Lost the connection to the test log ("+(err.code||"error")+"). Reload to try again."})})();
+</script>
