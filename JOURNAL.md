@@ -220,3 +220,10 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Online copy published as the "Trip Advisor Demo" artifact. Checked here: advice, why box, map, reminder note and the cue-card toggle at 1366×768, both served and from the folder.
 - Flutter: decided against switching before the hackathon (can't build or test Flutter here; Expo already covers the demo).
 - Launcher fix: tunnel mode failed ('@expo/ngrok is required … install it globally?' in non-interactive mode) even though a global copy was installed. The tunnel helper is now an app package (`@expo/ngrok` in package.json) and the launcher checks the project copy.
+
+## 11 Oct, 02:10–02:40 — Finding places: demo location, name search, pins
+- Ming: "My location" is hard to test indoors; asked for finding places by name, optional detail fields, and drag-and-drop.
+- Settings → Demo: "My location" can pretend to be at Pending, Stutong, Petra Jaya, Samarahan or Matang outer (shown as "My location (demo)"). The browser demo starts in Pending.
+- Place picker: search box with built-in Kuching areas and about 30 landmarks (positions approximate, ±1 km; `src/places.js`), optional "road or taman" and "near a landmark" fields that boost matches, and "Search online" (OpenStreetMap Nominatim, Greater Kuching only, needs internet; untested here because the workspace has no internet).
+- "Drop a pin on the map" / "Adjust pin" (`src/PinMap.js`): tap or drag on a Kuching / Greater Kuching map; shows the nearest area; Google Maps gets the exact point.
+- Browser demo: pickers open inside the phone frame (`src/Sheet.web.js`). Checked here: search → pick → drag pin → advice; road picker when scrolled; Android bundle builds.

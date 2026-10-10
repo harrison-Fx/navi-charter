@@ -7,7 +7,10 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
+import PinMap from "./src/PinMap";
+import { searchOffline, searchOnline } from "./src/places";
 import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
+import Sheet from "./src/Sheet";
 
 // ---------------------------------------------------------------- look
 const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
@@ -33,7 +36,7 @@ export default function App() {
 
 function Main() {
   const dark = useColorScheme() === "dark";
-  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning" });
+  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "" });
   const [places, setPlaces] = useState([]);
   const [trips, setTrips] = useState([]);
   const [reports, setReports] = useState([]);
@@ -76,6 +79,19 @@ function Main() {
   );
 }
 
+// "My location": real GPS, or a pretend spot chosen in Settings → Demo (for presenting indoors).
+const DEMO_SPOTS = ["Pending", "Stutong", "Petra Jaya", "Samarahan", "Matang outer"];
+async function getHere(settings) {
+  if (settings.fakeHere && NODES[settings.fakeHere]) {
+    const p = NODES[settings.fakeHere];
+    return { ll: [p[0] + 0.0031, p[1] - 0.0024], demo: true };      // ~0.4 km off the area centre, like a real fix
+  }
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== "granted") throw Object.assign(new Error("denied"), { denied: true });
+  const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+  return { ll: [pos.coords.latitude, pos.coords.longitude], demo: false };
+}
+
 // ---------------------------------------------------------------- plan
 function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest }) {
   const { width: winW } = useWindowDimensions();
@@ -91,6 +107,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null);
   const [showReport, setShowReport] = useState(false);
+  const [pin, setPin] = useState(null);   // { which: "from" | "to" }
 
   useEffect(() => { setSchool(!isWeekend(dayOff)); }, [dayOff]);
   useEffect(() => { setRes(null); }, [from, to, arrive, dayOff, school, conf, reports, settings.commOn, settings.vansOn, settings.sess]);
@@ -98,13 +115,13 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const useMyLocation = async () => {
     setLocating(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") { Alert.alert("Location is off", "Allow location for this app, or pick the area you're starting from."); return; }
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const ll = [pos.coords.latitude, pos.coords.longitude]; const n = nearest(ll);
+      const here = await getHere(settings);
+      const ll = here.ll; const n = nearest(ll);
       if (n.km > 15) Alert.alert("Outside the covered area", `You're about ${Math.round(n.km)} km from the nearest area this app knows (${n.name}). Advice will start from ${n.name}.`);
-      setFrom({ kind: "here", node: n.name, ll, label: "My location", note: `near ${n.name}, ${n.km < 1 ? "under 1" : n.km.toFixed(1)} km away` });
-    } catch (e) { Alert.alert("Couldn't get your location", "Check that location is turned on, then try again. You can also pick an area."); }
+      setFrom({ kind: "here", node: n.name, ll, label: here.demo ? "My location (demo)" : "My location", note: `near ${n.name}, ${n.km < 1 ? "under 1" : n.km.toFixed(1)} km away` });
+    } catch (e) {
+      if (e.denied) Alert.alert("Location is off", "Allow location for this app, or pick the area you're starting from. For a demo indoors, use Settings → Demo.");
+      else Alert.alert("Couldn't get your location", "Check that location is turned on, then try again. You can also pick an area, or use Settings → Demo."); }
     finally { setLocating(false); }
   };
 
@@ -155,9 +172,10 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
           <Btn s={s} kind={from.kind === "here" ? "solid" : "ghost"} onPress={useMyLocation} label={locating ? "Finding you…" : "My location"} />
           <Pressable style={[s.select, { flex: 1 }]} onPress={() => setPicker("from")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{from.label}</Text><Text style={s.chev}>▾</Text></Pressable>
         </View>
-        {from.note ? <Text style={s.hint}>{from.note}. Google Maps uses your exact position.</Text> : null}
+        <PlaceNote s={s} p={from} onPin={() => setPin({ which: "from" })} />
         <Text style={[s.label, { marginTop: 12 }]}>To</Text>
         <Pressable style={s.select} onPress={() => setPicker("to")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{to.label}</Text><Text style={s.chev}>▾</Text></Pressable>
+        <PlaceNote s={s} p={to} onPin={() => setPin({ which: "to" })} />
 
         <Text style={[s.label, { marginTop: 12 }]}>Arrive by</Text>
         <View style={[s.row, { alignItems: "center" }]}>
@@ -248,7 +266,12 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
       <PlacePicker visible={!!picker} s={s} c={c} places={places} allowHere={picker === "from"}
         onClose={() => setPicker(null)}
         onHere={() => { setPicker(null); useMyLocation(); }}
-        onPick={p => { (picker === "from" ? setFrom : setTo)(p); setPicker(null); }} />
+        onPick={p => { (picker === "from" ? setFrom : setTo)(p); setPicker(null); }}
+        onPin={() => { const w = picker; setPicker(null); setPin({ which: w }); }} />
+      <PinMap visible={!!pin} s={s} c={c} width={width} title={pin?.which === "to" ? "Where are you going?" : "Where are you starting?"}
+        start={pin ? ((pin.which === "from" ? from : to).ll || NODES[(pin.which === "from" ? from : to).node]) : null}
+        onClose={() => setPin(null)}
+        onUse={ll => { const n = nearest(ll); const p = { kind: "spot", node: n.name, ll, label: `Pin near ${n.name}`, note: `near ${n.name}, ${n.km < 1 ? "under 1" : n.km.toFixed(1)} km away` }; (pin.which === "from" ? setFrom : setTo)(p); setPin(null); }} />
     </ScrollView>
   );
 }
@@ -287,38 +310,83 @@ function ReportBox({ s, c, active, reports, setRe }) {
         </View>
       ))}
       <Text style={s.hint}>Reports last 2 hours and stay on this phone for now. In the full version they're shared with everyone and also come from official notices and traffic feeds.</Text>
-      <Modal visible={pick} animationType="slide" onRequestClose={() => setPick(false)}>
+      <Sheet visible={pick} onRequestClose={() => setPick(false)} bg={c.bg}>
         <SafeAreaView style={s.fill}>
           <View style={s.modalHead}><Text style={s.h2}>Which road?</Text><Pressable onPress={() => setPick(false)}><Text style={s.link}>Close</Text></Pressable></View>
           <FlatList data={ROADS.map((r, i) => ({ i, name: r.a + "–" + r.b })).sort((a, b) => a.name.localeCompare(b.name))} keyExtractor={x => String(x.i)}
             renderItem={({ item }) => <Pressable style={s.pickRow} onPress={() => { setRoad(item.i); setPick(false); }}><Text style={s.body}>{item.name}</Text></Pressable>} />
         </SafeAreaView>
-      </Modal>
+      </Sheet>
     </View>
   );
 }
 
-function PlacePicker({ visible, s, c, places, allowHere, onClose, onPick, onHere }) {
+function PlaceNote({ s, p, onPin }) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+      {p.note ? <Text style={[s.hint, { flexShrink: 1 }]}>{p.note}.{p.ll ? " Google Maps uses the exact point." : ""}</Text> : null}
+      <Pressable onPress={onPin} accessibilityRole="button"><Text style={[s.link, { fontSize: s.hint.fontSize }]}>{p.ll ? "Adjust pin" : "Pick exact spot"}</Text></Pressable>
+    </View>
+  );
+}
+
+function PlacePicker({ visible, s, c, places, allowHere, onClose, onPick, onHere, onPin }) {
+  const [q, setQ] = useState("");
+  const [more, setMore] = useState(false);
+  const [road, setRoad] = useState("");
+  const [near, setNear] = useState("");
+  const [online, setOnline] = useState(null);     // null | "busy" | [] | items | { err }
+  useEffect(() => { if (visible) { setQ(""); setRoad(""); setNear(""); setOnline(null); setMore(false); } }, [visible]);
+  useEffect(() => { setOnline(null); }, [q, road, near]);
+  const typed = (q + road + near).trim().length > 0;
+  const matches = typed ? searchOffline(q, road + " " + near, places) : [];
+  const goOnline = async () => {
+    setOnline("busy");
+    try { setOnline(await searchOnline(q, road, near)); }
+    catch { setOnline({ err: true }); }
+  };
   const sections = [
     ...(places.length ? [{ title: "Saved places", items: places.map(p => ({ kind: "saved", node: nearest(p.ll).name, ll: p.ll, label: p.name, note: `near ${nearest(p.ll).name}` })) }] : []),
     { title: "Kuching areas", items: Object.keys(AREAS).map(n => ({ kind: "area", node: n, label: n })) },
     { title: "Around Kuching", items: Object.keys(EXT).map(n => ({ kind: "area", node: n, label: n })) },
   ];
+  const Row = ({ it, k }) => <Pressable key={k} style={s.pickRow} onPress={() => onPick(it)}><Text style={s.body}>{it.label}</Text>{it.note ? <Text style={s.hint}>{it.note}</Text> : null}</Pressable>;
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Sheet visible={visible} onRequestClose={onClose} bg={c.bg}>
       <SafeAreaView style={s.fill}>
         <View style={s.modalHead}><Text style={s.h2}>Choose a place</Text><Pressable onPress={onClose}><Text style={s.link}>Close</Text></Pressable></View>
-        <ScrollView>
-          {allowHere && <Pressable style={s.pickRow} onPress={onHere}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>My current location</Text></Pressable>}
+        <View style={{ padding: 16, paddingBottom: 4, backgroundColor: c.surface }}>
+          <TextInput style={s.input} value={q} onChangeText={setQ} placeholder="Search a place, e.g. Vivacity, UNIMAS, Taman BDC" placeholderTextColor={c.muted} returnKeyType="search" onSubmitEditing={() => q.trim() && goOnline()} autoCorrect={false} />
+          {more ? (
+            <>
+              <TextInput style={s.input} value={road} onChangeText={setRoad} placeholder="Road or taman (optional), e.g. Jalan Stutong" placeholderTextColor={c.muted} autoCorrect={false} />
+              <TextInput style={s.input} value={near} onChangeText={setNear} placeholder="Near a landmark (optional), e.g. near Saradise" placeholderTextColor={c.muted} autoCorrect={false} />
+            </>
+          ) : <Pressable onPress={() => setMore(true)} style={{ paddingBottom: 8 }}><Text style={s.link}>+ Add road or nearby landmark</Text></Pressable>}
+        </View>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {allowHere && !typed && <Pressable style={s.pickRow} onPress={onHere}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>My current location</Text></Pressable>}
+          <Pressable style={s.pickRow} onPress={onPin}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>Drop a pin on the map</Text><Text style={s.hint}>Tap or drag to the exact spot</Text></Pressable>
+          {typed ? (
+            <View>
+              <Text style={s.sectionHead}>Matches</Text>
+              {matches.length ? matches.map((it, i) => <Row key={"m" + i} k={"m" + i} it={it} />) : <Text style={[s.hint, { paddingHorizontal: 16 }]}>No match in the built-in list.</Text>}
+              <Text style={s.sectionHead}>Online search (OpenStreetMap)</Text>
+              {online === null && <Pressable style={s.pickRow} onPress={goOnline}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>Search online for "{[q, road, near].filter(x => x.trim()).join(", ")}"</Text><Text style={s.hint}>Needs internet. Adding a road or landmark helps find the right spot.</Text></Pressable>}
+              {online === "busy" && <View style={s.pickRow}><ActivityIndicator color={c.accent} /></View>}
+              {online && online.err && <Text style={[s.hint, { paddingHorizontal: 16 }]}>Couldn't search online right now. Pick a match above, an area below, or drop a pin.</Text>}
+              {Array.isArray(online) && (online.length ? online.map((it, i) => <Row key={"o" + i} k={"o" + i} it={it} />) : <Text style={[s.hint, { paddingHorizontal: 16 }]}>Nothing found in Greater Kuching. Try fewer words, or drop a pin.</Text>)}
+            </View>
+          ) : null}
           {sections.map(sec => (
             <View key={sec.title}>
               <Text style={s.sectionHead}>{sec.title}</Text>
-              {sec.items.map(it => <Pressable key={sec.title + it.label} style={s.pickRow} onPress={() => onPick(it)}><Text style={s.body}>{it.label}</Text>{it.note ? <Text style={s.hint}>{it.note}</Text> : null}</Pressable>)}
+              {sec.items.map(it => <Row key={sec.title + it.label} k={sec.title + it.label} it={it} />)}
             </View>
           ))}
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -401,11 +469,9 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
     if (!name.trim()) { Alert.alert("Give the place a name first", "For example Home, Office or Mum's house."); return; }
     setBusy(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") { Alert.alert("Location is off", "Allow location to save where you are."); return; }
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setPl([...places, { name: name.trim(), ll: [pos.coords.latitude, pos.coords.longitude] }]); setName("");
-    } catch { Alert.alert("Couldn't get your location", "Try again outdoors or with location turned on."); }
+      const here = await getHere(settings);
+      setPl([...places, { name: name.trim(), ll: here.ll }]); setName("");
+    } catch (e) { e.denied ? Alert.alert("Location is off", "Allow location to save where you are.") : Alert.alert("Couldn't get your location", "Try again outdoors or with location turned on."); }
     finally { setBusy(false); }
   };
   return (
@@ -435,6 +501,16 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
         <Text style={s.label}>School hours (not confirmed yet)</Text>
         <Seg s={s} value={settings.sess} onChange={v => upd("sess", v)} options={[["morning", "Morning only"], ["both", "Morning + afternoon"]]} />
         <Text style={[s.hint, { marginTop: 8 }]}>This practice version doesn't use live traffic. It estimates traffic from the type of road, the time of day, school hours and the settings above, to test whether the advice is useful before connecting real data.</Text>
+      </View>
+      <View style={s.card}>
+        <Text style={s.h2}>Demo</Text>
+        <Text style={s.label}>"My location" pretends I'm at</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {[["", "Off (real GPS)"], ...DEMO_SPOTS.map(n => [n, n])].map(([v, l]) => (
+            <Btn key={l} s={s} small kind={(settings.fakeHere || "") === v ? "solid" : "ghost"} label={l} onPress={() => upd("fakeHere", v)} />
+          ))}
+        </View>
+        <Text style={[s.hint, { marginTop: 8 }]}>For presenting indoors or on a laptop. Turn it off for real trips.</Text>
       </View>
     </ScrollView>
   );

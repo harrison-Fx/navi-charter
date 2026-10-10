@@ -28,6 +28,8 @@ Before presenting, fill in: price placeholder on the proof slide (or delete it),
 5. **2:55 Act (35 s).** *Remind me* (notification), *Send as message* (WhatsApp text for a parent). Start a test trip → *I'm leaving* → shows how we measure real results.
 6. **3:30 Close (30 s).** "All offline, under a second per answer. Next: real road map, shared reports, one-week pilot."
 
+Finding places (if asked): type a name ("Vivacity", "UNIMAS"), add a road or landmark to narrow it, or drop and drag a pin. Indoors, Settings → Demo makes "My location" pretend to be in Pending, Samarahan, etc.
+
 Backup if the phone fails: `mobile/START-WEB-DEMO.bat` on the laptop. It is the same app (same screens, same engine) in a phone frame, offline, with this script as a cue card (press **S** to hide it, F11 for full screen). Reminders show a note and "Send as message" copies the text instead. Online copy: the "Trip Advisor Demo" artifact. Rebuild after app changes: `cd mobile && npm run web-demo`.
 
 ## Q&A cheat sheet
