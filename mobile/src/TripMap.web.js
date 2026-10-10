@@ -7,6 +7,7 @@ import { View, Text, Pressable } from "react-native";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { NODES, nearest } from "./engine";
+import Seg from "./Seg";
 
 const KUCHING = [1.545, 110.355];
 const BOUNDS = [[1.36, 110.18], [1.66, 110.56]];
@@ -30,7 +31,7 @@ export default function TripMap({ s, c, from, to, onSet, height = 280 }) {
 
   useEffect(() => {
     if (!box.current || map.current) return;
-    const m = L.map(box.current, { zoomControl: true, attributionControl: true, maxBounds: BOUNDS, minZoom: 10 }).setView(KUCHING, 12);
+    const m = L.map(box.current, { zoomControl: true, attributionControl: true, maxBounds: BOUNDS, minZoom: 10, scrollWheelZoom: false }).setView(KUCHING, 12);
     const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, attribution: "© OpenStreetMap contributors",
     }).addTo(m);
@@ -71,16 +72,11 @@ export default function TripMap({ s, c, from, to, onSet, height = 280 }) {
       () => setLocating(false), { enableHighAccuracy: true, timeout: 10000 });
   };
 
-  const chip = (v, label) => (
-    <Pressable key={v} onPress={() => setAim(v)} style={[s.segItem, aimState === v && s.segOn]} accessibilityRole="radio" accessibilityState={{ selected: aimState === v }}>
-      <Text style={[s.segText, aimState === v && s.segTextOn]}>{label}</Text>
-    </Pressable>
-  );
   return (
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Text style={[s.label, { marginBottom: 0 }]}>Tap the map to set</Text>
-        <View style={[s.seg, { flex: 1 }]}>{chip("from", "A · Start")}{chip("to", "B · Destination")}</View>
+        <Seg s={s} value={aimState} onChange={setAim} options={[["from", "A · Start"], ["to", "B · Destination"]]} />
       </View>
       <View style={{ height, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: c.line }}>
         <View ref={box} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, cursor: "crosshair" }} />

@@ -7,6 +7,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
+import Seg from "./src/Seg";
 import PinMap from "./src/PinMap";
 import { searchOffline, searchOnline, streetName, suggest, suggestOnline } from "./src/places";
 import TripMap, { hasTripMap } from "./src/TripMap";
@@ -14,8 +15,8 @@ import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
 import Sheet from "./src/Sheet";
 
 // ---------------------------------------------------------------- look
-const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
-const DARK = { bg: "#151815", surface: "#1F231F", sunk: "#2A2F2A", line: "#373D37", fg: "#E8EBE6", muted: "#A3AA9F", accent: "#78A6EC", accentInk: "#0E1A2C", accentSoft: "#1E2D45", school: "#F0A050", schoolSoft: "#3A2814", slow: "#F07B7B", slowSoft: "#3D1D1D", ok: "#6FCB94", okSoft: "#173326", road: "#454C44" };
+const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", thumb: "#FFFFFF", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
+const DARK = { bg: "#151815", surface: "#1F231F", sunk: "#2A2F2A", line: "#373D37", fg: "#E8EBE6", muted: "#A3AA9F", accent: "#78A6EC", accentInk: "#0E1A2C", accentSoft: "#1E2D45", thumb: "#3A413A", school: "#F0A050", schoolSoft: "#3A2814", slow: "#F07B7B", slowSoft: "#3D1D1D", ok: "#6FCB94", okSoft: "#173326", road: "#454C44" };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
@@ -579,9 +580,6 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
 function Btn({ s, label, onPress, kind = "solid", small }) {
   return <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [kind === "solid" ? s.btn : s.btnGhost, small && s.btnSmall, pressed && { opacity: .7 }]}><Text style={[kind === "solid" ? s.btnText : s.btnGhostText, small && { fontSize: s.small.fontSize }]}>{label}</Text></Pressable>;
 }
-function Seg({ s, value, onChange, options }) {
-  return <View style={s.seg}>{options.map(([v, l]) => <Pressable key={String(v)} onPress={() => onChange(v)} style={[s.segItem, v === value && s.segOn]} accessibilityRole="radio" accessibilityState={{ selected: v === value }}><Text style={[s.segText, v === value && s.segTextOn]}>{l}</Text></Pressable>)}</View>;
-}
 function Pill({ s, c, tone, text }) {
   const m = { ok: [c.okSoft, c.ok], warn: [c.schoolSoft, c.school], bad: [c.slowSoft, c.slow], info: [c.accentSoft, c.accent] }[tone];
   return <View style={[s.pill, { backgroundColor: m[0] }]}><Text style={[s.pillText, { color: m[1] }]}>{text}</Text></View>;
@@ -616,11 +614,14 @@ function makeStyles(c, f) {
     btnGhost: { borderWidth: 1.5, borderColor: c.accent, borderRadius: 999, minHeight: fs(46), paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
     btnGhostText: { color: c.accent, fontWeight: "700", fontSize: fs(15), textAlign: "center" },
     btnSmall: { minHeight: fs(38), paddingHorizontal: 10 },
-    seg: { flexDirection: "row", backgroundColor: c.sunk, borderRadius: 999, padding: 3, flex: 1 },
-    segItem: { flex: 1, borderRadius: 999, paddingVertical: 8, alignItems: "center" },
-    segOn: { backgroundColor: c.surface },
-    segText: { fontSize: fs(14), color: c.muted, fontWeight: "600" },
-    segTextOn: { color: c.fg },
+    seg: { flexDirection: "row", backgroundColor: c.sunk, borderRadius: 12, padding: 3, flex: 1, position: "relative" },
+    segThumb: { position: "absolute", top: 3, bottom: 3, left: 3, borderRadius: 9, backgroundColor: c.thumb,
+      ...(Platform.OS === "web" ? { boxShadow: "0 1px 2px rgba(16,24,40,.10), 0 2px 6px rgba(16,24,40,.08)" }
+        : { shadowColor: "#000", shadowOpacity: .12, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }) },
+    segItem: { flex: 1, borderRadius: 9, paddingVertical: fs(8), paddingHorizontal: 4, alignItems: "center", justifyContent: "center", zIndex: 1 },
+    segOn: {},
+    segText: { fontSize: fs(13.5), color: c.muted, fontWeight: "600", letterSpacing: .1 },
+    segTextOn: { color: c.accent, fontWeight: "700" },
     cap: { fontSize: fs(13), color: c.muted, fontWeight: "700", letterSpacing: 1 },
     leave: { fontSize: fs(44), fontWeight: "800", color: c.fg, fontVariant: ["tabular-nums"], marginRight: 6 },
     via: { fontSize: fs(16), fontWeight: "600", color: c.fg, marginTop: 4 },

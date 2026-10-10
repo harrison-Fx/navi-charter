@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
 import Sheet from "./Sheet";
+import Seg from "./Seg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Line, Circle, Rect, Text as SvgText, G, Path } from "react-native-svg";
 import { AREAS, EXT, NODES, ROADS, nearest } from "./engine";
@@ -33,11 +34,7 @@ export default function PinMap({ visible, s, c, width, start, title, onUse, onCl
       <SafeAreaView style={s.fill}>
         <View style={s.modalHead}><Text style={s.h2}>{title || "Drop a pin"}</Text><Pressable onPress={onClose}><Text style={s.link}>Close</Text></Pressable></View>
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} scrollEnabled={false}>
-          <View style={s.seg}>
-            {[["city", "Kuching"], ["greater", "Greater Kuching"]].map(([v, l]) => (
-              <Pressable key={v} onPress={() => setView(v)} style={[s.segItem, view === v && s.segOn]} accessibilityRole="radio" accessibilityState={{ selected: view === v }}><Text style={[s.segText, view === v && s.segTextOn]}>{l}</Text></Pressable>
-            ))}
-          </View>
+          <Seg s={s} value={view} onChange={setView} options={[["city", "Kuching"], ["greater", "Greater Kuching"]]} style={{ flex: 0 }} />
           <Text style={s.hint}>Tap the map or drag the pin. Positions are approximate; the advice uses the nearest area.</Text>
           <View style={{ width: W, height: H, borderRadius: 12, overflow: "hidden", backgroundColor: c.sunk, alignSelf: "center", userSelect: "none", touchAction: "none", cursor: "crosshair" }}
             onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}
