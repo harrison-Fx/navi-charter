@@ -44,7 +44,7 @@ export default function App() {
 
 function Main() {
   const sysDark = useColorScheme() === "dark";
-  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "", theme: "auto" });
+  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "", theme: "auto", tips: true });
   const [places, setPlaces] = useState([]);
   const [trips, setTrips] = useState([]);
   const [reports, setReports] = useState([]);
@@ -69,9 +69,12 @@ function Main() {
   return (
     <SafeAreaView style={s.fill} edges={["top", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
-      <View style={s.header}><Text style={s.title}>Kuching Trip Advisor</Text><Text style={s.badge}>Practice version · made-up traffic</Text></View>
+      <View style={[s.header, { flexDirection: "row", alignItems: "flex-start" }]}>
+        <View style={{ flex: 1 }}><Text style={s.title}>Kuching Trip Advisor</Text><Text style={s.badge}>Practice version · made-up traffic</Text></View>
+        {tab === "plan" && settings.tips === false && <Pressable onPress={() => upd("tips", true)} accessibilityRole="button" style={{ paddingVertical: 4, paddingLeft: 8 }}><Text style={[s.link, { fontSize: 13 }]}>How it works</Text></Pressable>}
+      </View>
       <View style={{ flex: 1 }}>
-        {tab === "plan" && <PlanScreen {...{ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest: () => setTab("test") }} />}
+        {tab === "plan" && <PlanScreen {...{ s, c, f, settings, upd, places, setPl, reports, setRe, trips, setTr, goTest: () => setTab("test") }} />}
         {tab === "test" && <TestScreen {...{ s, c, trips, setTr, settings }} />}
         {tab === "settings" && <SettingsScreen {...{ s, c, settings, upd, places, setPl }} />}
       </View>
@@ -102,7 +105,7 @@ async function getHere(settings) {
 }
 
 // ---------------------------------------------------------------- plan
-function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest }) {
+function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, trips, setTr, goTest }) {
   const { width: winW } = useWindowDimensions();
   const width = isWeb ? Math.min(winW, 430) : winW;
   const [from, setFrom] = useState({ kind: "area", node: "Pending", label: "Pending" });
@@ -185,6 +188,20 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const causes = b ? riskCauses(b, active) : [];
   return (
     <ScrollView ref={scroller} contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
+      {settings.tips !== false && (
+        <View style={[s.card, { backgroundColor: c.accentSoft, borderColor: c.accentSoft, gap: 8 }]}>
+          <Text style={[s.h2, { marginBottom: 0 }]}>How it works</Text>
+          {[["1", "Where from and where to", "Type a place (\"Vivacity\", \"hospital near Petra Jaya\"), tap the map for A and B, or use My location."],
+            ["2", "When you need to be there", "Tap a time, type it (\"8:15\") or drag the day bar."],
+            ["3", "When should I leave?", "You get a leave time, your chance of being late, the reason, and a Google Maps link."]].map(([n, t, d]) => (
+            <View key={n} style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.accent, alignItems: "center", justifyContent: "center", marginTop: 1 }}><Text style={{ color: c.accentInk, fontWeight: "800", fontSize: 12 }}>{n}</Text></View>
+              <View style={{ flex: 1 }}><Text style={[s.body, { fontWeight: "700" }]}>{t}</Text><Text style={s.hint}>{d}</Text></View>
+            </View>))}
+          <Text style={s.hint}>Traffic is simulated in this prototype: the advice shows how the method works, not today's real roads.</Text>
+          <Pressable onPress={() => upd("tips", false)} accessibilityRole="button" style={{ alignSelf: "flex-end" }}><Text style={s.link}>Got it</Text></Pressable>
+        </View>
+      )}
       <View style={s.card}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <Text style={[s.label, { marginBottom: 0 }]}>From</Text>
@@ -204,6 +221,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
           <Seg s={s} value={school} onChange={setSchool} options={[[true, "School day"], [false, "No school"]]} />
         </View>
         <Text style={[s.label, { marginTop: 12 }]}>How sure do you want to be?</Text>
+        <Text style={[s.hint, { marginTop: -4, marginBottom: 6 }]}>90% means you'd be late about 1 trip in 10. Higher means leaving a bit earlier.</Text>
         <Seg s={s} value={conf} onChange={setConf} options={[[.8, "80%"], [.9, "90%"], [.95, "95%"]]} />
         <View style={{ marginTop: 14 }}><Btn s={s} kind="solid" label={busy ? "Working it out…" : "When should I leave?"} onPress={run} /></View>
         {active.length > 0 && <Text style={[s.hint, { marginTop: 8 }]}>{active.length} road report{active.length > 1 ? "s" : ""} included.</Text>}
@@ -211,6 +229,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
 
       <View style={s.card}>
         <Pressable onPress={() => setShowReport(!showReport)} accessibilityRole="button"><Text style={s.h2}>Road reports {active.length ? `(${active.length})` : ""} {showReport ? "▴" : "▾"}</Text></Pressable>
+        {!showReport && !active.length && <Text style={s.hint}>Seen a closure or a jam? Add it here before asking, and the advice will route around it.</Text>}
         {showReport && <ReportBox {...{ s, c, active, reports, setRe }} />}
       </View>
 
