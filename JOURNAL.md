@@ -232,3 +232,10 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Ming: go web-based for now (prototype demo), integrate more map features to ease setting start and destination.
 - Plan screen (web): real OpenStreetMap street map (Leaflet, `src/TripMap.web.js`): "Tap the map to set A · Start / B · Destination" (switches to B after A), draggable A/B pins, "Locate me" (browser location), pins renamed to the street when online (Nominatim reverse). Without internet the map says so; place list and simple pin map still work. Phone build unchanged (TripMap.js is empty there).
 - `npm run web-demo` also copies the build to `docs/` for GitHub Pages (needs Ming to enable Pages: main /docs). Tiles can't load in the private online copy (page blocks outside images) or in Claude's offline workspace, so the street map was checked here only for tapping/pins and the offline note.
+
+## 11 Oct, 03:00 — Type-ahead From / To with context
+- Ming: From/To should take typed text and suggest places using more context from what's typed.
+- From and To are now type-ahead boxes (`PlaceField` in App.js; `parseTyped`, `suggest`, `suggestOnline` in src/places.js). Typed text is split into the place and context: "near / dekat / berhampiran / opposite / beside / @ …" and road or taman words (Jalan, Jln, Lorong, Taman, Tmn, Kampung…) or anything after a comma.
+- Context with a known place (landmark, area, saved place) becomes an anchor: built-in matches must match the name and are sorted by distance to it; online search is limited to about 4 km around it; an approximate "<name> (near <anchor>)" option is always offered. Shows "Looking for X near Y (found Y)".
+- Online suggestions (OpenStreetMap) appear after a short pause when online. Enter picks the top suggestion; ▾ opens the full list / pin map; "◎ My location" moved next to the From label.
+- Checked here: "hospital dekat petra jaya" → Normah first; "7-Eleven near Saradise" → approximate spot at Saradise; advice runs. Online suggestions untested (no internet here).

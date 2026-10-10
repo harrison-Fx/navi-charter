@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
 import PinMap from "./src/PinMap";
-import { searchOffline, searchOnline, streetName } from "./src/places";
+import { searchOffline, searchOnline, streetName, suggest, suggestOnline } from "./src/places";
 import TripMap, { hasTripMap } from "./src/TripMap";
 import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
 import Sheet from "./src/Sheet";
@@ -176,14 +176,14 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   return (
     <ScrollView contentContainerStyle={s.page} keyboardShouldPersistTaps="handled">
       <View style={s.card}>
-        <Text style={s.label}>From</Text>
-        <View style={s.row}>
-          <Btn s={s} kind={from.kind === "here" ? "solid" : "ghost"} onPress={useMyLocation} label={locating ? "Finding you…" : "My location"} />
-          <Pressable style={[s.select, { flex: 1 }]} onPress={() => setPicker("from")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{from.label}</Text><Text style={s.chev}>▾</Text></Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <Text style={[s.label, { marginBottom: 0 }]}>From</Text>
+          <Btn s={s} small kind={from.kind === "here" ? "solid" : "ghost"} onPress={useMyLocation} label={locating ? "Finding you…" : "◎ My location"} />
         </View>
+        <PlaceField s={s} c={c} value={from} places={places} allowHere onHere={useMyLocation} onPick={setFrom} onMore={() => setPicker("from")} />
         <PlaceNote s={s} p={from} onPin={() => setPin({ which: "from" })} />
         <Text style={[s.label, { marginTop: 12 }]}>To</Text>
-        <Pressable style={s.select} onPress={() => setPicker("to")} accessibilityRole="button"><Text style={s.selectText} numberOfLines={1}>{to.label}</Text><Text style={s.chev}>▾</Text></Pressable>
+        <PlaceField s={s} c={c} value={to} places={places} onPick={setTo} onMore={() => setPicker("to")} />
         <PlaceNote s={s} p={to} onPin={() => setPin({ which: "to" })} />
         {hasTripMap && <View style={{ marginTop: 12 }}><TripMap s={s} c={c} from={from} to={to} onSet={setByMap} /></View>}
 
@@ -327,6 +327,55 @@ function ReportBox({ s, c, active, reports, setRe }) {
             renderItem={({ item }) => <Pressable style={s.pickRow} onPress={() => { setRoad(item.i); setPick(false); }}><Text style={s.body}>{item.name}</Text></Pressable>} />
         </SafeAreaView>
       </Sheet>
+    </View>
+  );
+}
+
+// Type a place: suggestions appear as you type. Extra words are read as context:
+// "7-Eleven near Saradise", "SMK Green Road, Jalan Batu Lintang", "office tmn bdc".
+function PlaceField({ s, c, value, places, allowHere, onHere, onPick, onMore }) {
+  const [text, setText] = useState(null);           // null = not editing, show the chosen place
+  const [online, setOnline] = useState(null);       // null | "busy" | items | { err }
+  const editing = text !== null;
+  const typed = (text || "").trim();
+  const sug = typed.length >= 2 ? suggest(typed, places) : null;
+  useEffect(() => {
+    setOnline(null);
+    if (typed.length < 3) return;
+    const id = setTimeout(() => {
+      setOnline("busy");
+      suggestOnline(typed, places).then(r => setOnline(r)).catch(() => setOnline({ err: true }));
+    }, 700);
+    return () => clearTimeout(id);
+  }, [typed]);
+  const close = () => setTimeout(() => setText(null), 180);   // let a tap on a suggestion land first
+  const pick = it => { onPick(it); setText(null); };
+  const ctx = sug && sug.parsed;
+  return (
+    <View>
+      <View style={[s.select, { paddingRight: 0 }]}>
+        <TextInput style={[s.selectText, { minHeight: 44, outlineStyle: "none" }]} value={editing ? text : value.label}
+          onFocus={() => setText("")} onBlur={close} onChangeText={setText} placeholder="Type a place, e.g. 7-Eleven near Saradise"
+          placeholderTextColor={c.muted} autoCorrect={false} returnKeyType="search"
+          onSubmitEditing={() => { const first = (sug && sug.list[0]) || (Array.isArray(online) && online[0]); if (first) pick(first); }} />
+        <Pressable onPress={onMore} accessibilityRole="button" accessibilityLabel="Choose from the list or map" style={{ paddingHorizontal: 12, alignSelf: "stretch", justifyContent: "center" }}><Text style={s.chev}>▾</Text></Pressable>
+      </View>
+      {editing && (
+        <View style={{ borderWidth: 1, borderColor: c.line, borderRadius: 10, marginTop: 4, overflow: "hidden", backgroundColor: c.surface }}>
+          {ctx && (ctx.near || ctx.road) ? (
+            <Text style={[s.hint, { paddingHorizontal: 12, paddingTop: 8 }]}>
+              Looking for <Text style={{ fontWeight: "700" }}>{ctx.name || "a place"}</Text>{ctx.road ? <> on/in <Text style={{ fontWeight: "700" }}>{ctx.road}</Text></> : null}{ctx.near ? <> near <Text style={{ fontWeight: "700" }}>{ctx.near}</Text></> : null}{sug.anchor ? ` (found ${sug.anchor.label})` : ""}
+            </Text>) : null}
+          {!typed && allowHere ? <Pressable style={s.pickRow} onPress={() => { setText(null); onHere(); }}><Text style={[s.body, { color: c.accent, fontWeight: "700" }]}>My current location</Text></Pressable> : null}
+          {!typed && places.map((p, i) => <Pressable key={"sv" + i} style={s.pickRow} onPress={() => pick({ kind: "saved", node: nearest(p.ll).name, ll: p.ll, label: p.name, note: `near ${nearest(p.ll).name}` })}><Text style={s.body}>★ {p.name}</Text></Pressable>)}
+          {!typed && <Text style={[s.hint, { padding: 12 }]}>Add context to narrow it down: "near …", a road (Jalan …) or a taman.</Text>}
+          {sug && sug.list.map((it, i) => <Pressable key={"s" + i} style={s.pickRow} onPress={() => pick(it)}><Text style={s.body}>{it.label}</Text>{it.note ? <Text style={s.hint}>{it.note}</Text> : null}</Pressable>)}
+          {typed.length >= 3 && online === "busy" && <View style={[s.pickRow, { flexDirection: "row", gap: 8, alignItems: "center" }]}><ActivityIndicator color={c.accent} /><Text style={s.hint}>Searching OpenStreetMap…</Text></View>}
+          {Array.isArray(online) && online.map((it, i) => <Pressable key={"o" + i} style={s.pickRow} onPress={() => pick(it)}><Text style={s.body}>{it.label}</Text><Text style={s.hint}>{it.note} · online</Text></Pressable>)}
+          {typed.length >= 3 && online && online.err && <Text style={[s.hint, { padding: 12 }]}>Online search unavailable (no internet). Built-in suggestions only.</Text>}
+          {typed ? <Pressable style={s.pickRow} onPress={() => { setText(null); onMore(); }}><Text style={[s.body, { color: c.accent }]}>More: full list or drop a pin…</Text></Pressable> : null}
+        </View>
+      )}
     </View>
   );
 }

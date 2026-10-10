@@ -2,7 +2,7 @@
 // 1) Offline: Kuching areas plus well-known landmarks. Landmark positions are APPROXIMATE
 //    (about ±1 km); the advice only needs the nearest area, and the user can drag the pin.
 // 2) Online (optional): OpenStreetMap's Nominatim search, limited to Greater Kuching.
-import { AREAS, EXT, NODES, nearest } from "./engine";
+import { AREAS, EXT, NODES, nearest, hav } from "./engine";
 
 // [name, lat, lon, extra words people might type]
 export const LANDMARKS = [
@@ -69,10 +69,11 @@ export function searchOffline(query, detail = "", saved = []) {
 }
 
 // Online search (needs internet). Combines the name with the optional details.
-export async function searchOnline(query, road = "", near = "") {
+export async function searchOnline(query, road = "", near = "", box = null) {
   const q = [query, road, near, "Kuching, Sarawak"].filter(x => x && x.trim()).join(", ");
+  const vb = box ? `${box[1] - .04},${box[0] + .04},${box[1] + .04},${box[0] - .04}` : "110.22,1.62,110.52,1.38";
   const url = "https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=my&bounded=1"
-    + "&viewbox=110.22,1.62,110.52,1.38&q=" + encodeURIComponent(q);
+    + "&viewbox=" + vb + "&q=" + encodeURIComponent(q);
   const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : null;
   try {
@@ -105,4 +106,65 @@ export async function streetName(ll) {
     const a = (await r.json()).address || {};
     return a.road || a.neighbourhood || a.suburb || a.amenity || null;
   } catch { return null; }
+}
+
+// ---- type-ahead for the From / To boxes ---------------------------------------------
+// Splits what the user typed into the place itself and extra context:
+//   "7-Eleven near Saradise"        → name "7-Eleven",  near "Saradise"
+//   "SMK Green Road, Jalan Batu Lintang" → name "SMK Green Road", road "Jalan Batu Lintang"
+//   "office tmn bdc"                → name "office", road "tmn bdc"
+const NEAR = /\s*(?:\bnear\b|\bdekat\b|\bberhampiran\b|\bopposite\b|\bopp\b|\bbeside\b|\bbehind\b|\bnext to\b|\bsebelah\b|\bdepan\b|@)\s*/i;
+const ROADWORD = /\b(jalan|jln|lorong|lrg|taman|tmn|kampung|kg|lebuh|persiaran)\b/i;
+export function parseTyped(text) {
+  let t = (text || "").trim(), near = "", road = "";
+  const m = t.split(NEAR);
+  if (m.length > 1) { t = m[0]; near = m.slice(1).join(" "); }
+  const parts = t.split(",").map(x => x.trim()).filter(Boolean);
+  let name = parts.shift() || "";
+  parts.forEach(p => { road += (road ? " " : "") + p; });
+  const rm = name.match(ROADWORD);
+  if (rm && rm.index > 0) { road = (name.slice(rm.index) + " " + road).trim(); name = name.slice(0, rm.index).trim(); }
+  return { name, road, near };
+}
+
+// A rough position for the "near …" / road part, if it's something we know offline.
+export function anchorFor(parsed, saved = []) {
+  const ctx = [parsed.near, parsed.road].filter(Boolean).join(" ");
+  if (!ctx) return null;
+  const hit = searchOffline(ctx, "", saved)[0];
+  if (!hit) return null;
+  return { ll: hit.ll || NODES[hit.node], label: hit.label };
+}
+
+// Offline suggestions for typed text; context words boost matches, and an anchor
+// ("near Saradise") re-ranks by distance to it.
+export function suggest(text, saved = []) {
+  const p = parseTyped(text);
+  const anchor = anchorFor(p, saved);
+  let list;
+  if (anchor) {
+    // must match the name; context only decides the order (closest to the anchor first)
+    list = (p.name ? searchOffline(p.name, "", saved) : [])
+      .map(it => ({ it, d: hav(it.ll || NODES[it.node], anchor.ll) }))
+      .sort((a, b) => a.d - b.d)
+      .map(x => ({ ...x.it, note: (x.it.note ? x.it.note + " · " : "") + `${x.d < 1 ? "under 1" : x.d.toFixed(1)} km from ${anchor.label}` }));
+    // always offer the anchor itself as an approximate spot ("somewhere near Saradise")
+    const a = nearest(anchor.ll);
+    list.push({ kind: "spot", node: a.name, ll: anchor.ll, label: p.name ? `${p.name} (near ${anchor.label})` : anchor.label,
+                note: `Approximate: placed at ${anchor.label}. Drag the pin to adjust.` });
+  } else {
+    list = searchOffline(p.name || text, p.road, saved);
+  }
+  return { parsed: p, anchor, list: list.slice(0, 6) };
+}
+
+export async function suggestOnline(text, saved = []) {
+  const p = parseTyped(text);
+  const anchor = anchorFor(p, saved);
+  // a known anchor narrows the search box instead of being sent as words
+  let res = await searchOnline(p.name || text, p.road, anchor ? "" : p.near, anchor ? anchor.ll : null);
+  if (!res.length && anchor) res = await searchOnline(p.name || text, p.road, p.near);
+  if (anchor) res = res.map(it => ({ it, d: hav(it.ll, anchor.ll) })).sort((a, b) => a.d - b.d)
+    .map(x => ({ ...x.it, note: x.it.note + ` · ${x.d < 1 ? "under 1" : x.d.toFixed(1)} km from ${anchor.label}` }));
+  return res;
 }
