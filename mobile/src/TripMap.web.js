@@ -48,6 +48,14 @@ export default function TripMap({ s, c, from, to, onSet, height = 280 }) {
     return () => { m.remove(); map.current = null; mk.current = {}; };
   }, []);
 
+  // dark themes: dim and invert the street tiles so the map doesn't glare
+  useEffect(() => {
+    const m = map.current; if (!m) return;
+    const pane = m.getPane("tilePane");
+    if (pane) pane.style.filter = c.dark ? "invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)" : "";
+    if (box.current) box.current.style.background = c.dark ? "#1b2230" : "";
+  }, [c.dark]);
+
   // keep markers in step with the trip
   useEffect(() => {
     const m = map.current; if (!m) return;

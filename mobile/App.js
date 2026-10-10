@@ -18,7 +18,11 @@ import Sheet from "./src/Sheet";
 
 // ---------------------------------------------------------------- look
 const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", thumb: "#FFFFFF", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
-const DARK = { bg: "#151815", surface: "#1F231F", sunk: "#2A2F2A", line: "#373D37", fg: "#E8EBE6", muted: "#A3AA9F", accent: "#78A6EC", accentInk: "#0E1A2C", accentSoft: "#1E2D45", thumb: "#3A413A", school: "#F0A050", schoolSoft: "#3A2814", slow: "#F07B7B", slowSoft: "#3D1D1D", ok: "#6FCB94", okSoft: "#173326", road: "#454C44" };
+// Themes: Light, Dark (grey), Navy, Midnight. "Auto" follows the phone: Light or Dark (grey).
+const GREY = { bg: "#151815", surface: "#1F231F", sunk: "#2A2F2A", line: "#373D37", fg: "#E8EBE6", muted: "#A3AA9F", accent: "#78A6EC", accentInk: "#0E1A2C", accentSoft: "#1E2D45", thumb: "#3A413A", school: "#F0A050", schoolSoft: "#3A2814", slow: "#F07B7B", slowSoft: "#3D1D1D", ok: "#6FCB94", okSoft: "#173326", road: "#454C44", dark: true };
+const NAVY = { bg: "#0F1A2E", surface: "#16243D", sunk: "#1E2F4D", line: "#2A3D5E", fg: "#E6ECF5", muted: "#9DAEC8", accent: "#7FB0FF", accentInk: "#0B1426", accentSoft: "#1C3358", thumb: "#2C4470", school: "#F2A65A", schoolSoft: "#3B2A17", slow: "#FF8A80", slowSoft: "#3F1F25", ok: "#72D39A", okSoft: "#15352A", road: "#33486B", dark: true };
+const MIDNIGHT = { bg: "#05060A", surface: "#0D0F14", sunk: "#161920", line: "#232733", fg: "#E9ECF2", muted: "#8E95A5", accent: "#8AB4FF", accentInk: "#070A12", accentSoft: "#141E33", thumb: "#262B38", school: "#F0A050", schoolSoft: "#2A1D0F", slow: "#FF7B7B", slowSoft: "#2E1214", ok: "#6FCB94", okSoft: "#0F261A", road: "#2A2E3A", dark: true };
+const THEMES = { light: LIGHT, grey: GREY, navy: NAVY, midnight: MIDNIGHT };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
@@ -39,16 +43,17 @@ export default function App() {
 }
 
 function Main() {
-  const dark = useColorScheme() === "dark";
-  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "" });
+  const sysDark = useColorScheme() === "dark";
+  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "", theme: "auto" });
   const [places, setPlaces] = useState([]);
   const [trips, setTrips] = useState([]);
   const [reports, setReports] = useState([]);
   const [tab, setTab] = useState("plan");
   const [ready, setReady] = useState(false);
-  const c = dark ? DARK : LIGHT;
+  const themeKey = !settings.theme || settings.theme === "auto" ? (sysDark ? "grey" : "light") : settings.theme;
+  const c = THEMES[themeKey] || LIGHT, dark = !!c.dark;
   const f = settings.big ? 1.25 : 1;
-  const s = useMemo(() => makeStyles(c, f), [dark, f]);
+  const s = useMemo(() => makeStyles(c, f), [themeKey, f]);
 
   useEffect(() => { (async () => {
     setSettings(await load("settings", settings)); setPlaces(await load("places", [])); setTrips(await load("trips", []));
@@ -485,6 +490,8 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
         <Text style={s.h2}>You</Text>
         <Text style={s.label}>Nickname for test trips</Text>
         <TextInput style={s.input} value={settings.nick} onChangeText={v => upd("nick", v.slice(0, 24))} placeholder="e.g. Ming" placeholderTextColor={c.muted} />
+        <Text style={[s.label, { marginTop: 4 }]}>Theme</Text>
+        <Seg s={s} value={settings.theme || "auto"} onChange={v => upd("theme", v)} options={[["auto", "Auto"], ["light", "Light"], ["grey", "Dark"], ["navy", "Navy"], ["midnight", "Midnight"]]} style={{ flex: 0, flexBasis: "auto", marginBottom: 8 }} compact />
         <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>Large text</Text><Switch value={settings.big} onValueChange={v => upd("big", v)} /></View>
         <Text style={s.hint}>No account needed. Everything here stays on this phone.</Text>
       </View>

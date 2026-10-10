@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, Animated, Platform } from "react-native";
 
-export default function Seg({ s, value, onChange, options, style }) {
+export default function Seg({ s, value, onChange, options, style, compact }) {
   const [w, setW] = useState(0);
   const n = options.length;
   const idx = Math.max(0, options.findIndex(([v]) => v === value));
@@ -18,9 +18,9 @@ export default function Seg({ s, value, onChange, options, style }) {
       {options.map(([v, l]) => {
         const on = v === value;
         return (
-          <Pressable key={String(v)} onPress={() => onChange(v)} style={s.segItem}
+          <Pressable key={String(v)} onPress={() => onChange(v)} style={[s.segItem, compact && { paddingHorizontal: 1 }]}
             accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={l}>
-            <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>{l}</Text>
+            <Text style={[s.segText, compact && { fontSize: 12.5, letterSpacing: 0 }, on && s.segTextOn]} numberOfLines={1}>{l}</Text>
           </Pressable>
         );
       })}

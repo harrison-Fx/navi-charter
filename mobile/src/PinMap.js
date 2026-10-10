@@ -34,7 +34,7 @@ export default function PinMap({ visible, s, c, width, start, title, onUse, onCl
       <SafeAreaView style={s.fill}>
         <View style={s.modalHead}><Text style={s.h2}>{title || "Drop a pin"}</Text><Pressable onPress={onClose}><Text style={s.link}>Close</Text></Pressable></View>
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} scrollEnabled={false}>
-          <Seg s={s} value={view} onChange={setView} options={[["city", "Kuching"], ["greater", "Greater Kuching"]]} style={{ flex: 0 }} />
+          <Seg s={s} value={view} onChange={setView} options={[["city", "Kuching"], ["greater", "Greater Kuching"]]} style={{ flex: 0, flexBasis: "auto" }} />
           <Text style={s.hint}>Tap the map or drag the pin. Positions are approximate; the advice uses the nearest area.</Text>
           <View style={{ width: W, height: H, borderRadius: 12, overflow: "hidden", backgroundColor: c.sunk, alignSelf: "center", userSelect: "none", touchAction: "none", cursor: "crosshair" }}
             onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}
