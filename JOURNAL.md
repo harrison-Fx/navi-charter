@@ -213,3 +213,9 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - Approximate-map rerun (`outputs/v9/`): same story as v7, numbers within about 1.5 points (closure: typical app 63.8%, advisor 65.4%, school-safe 66.5%; fixed routes 54.0%). Slides keep the v7 numbers until the real-map run replaces both.
 - Calibration chart: estimates lean cautious in the middle (says 60% → ~45% late), not overconfident as earlier notes said.
 - Noise scan: closure-day gain holds at every noise level (+0.6 to +1.9 pts); warning precision depends on the live traffic reading (85% good / 71% default / 50% poor).
+
+## 11 Oct, 02:00 — Browser backup demo
+- Ming asked for a browser backup for the presentation. The Expo app now also builds for the web (`npm run web-demo` → `mobile/web-demo/`, opens straight from the folder, offline). Presenter page: phone frame plus the 4-minute demo script as a cue card (S hides it). `START-WEB-DEMO.bat` opens it full screen in Chrome or Edge.
+- On the web, reminders show a note, sharing copies the text, and pop-ups become in-app notes (`src/webshim.js`); the phone app is unchanged (Android bundle rebuilt and checked).
+- Online copy published as the "Trip Advisor Demo" artifact. Checked here: advice, why box, map, reminder note and the cue-card toggle at 1366×768, both served and from the folder.
+- Flutter: decided against switching before the hackathon (can't build or test Flutter here; Expo already covers the demo).

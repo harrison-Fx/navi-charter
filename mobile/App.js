@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, Switch, Modal, FlatList, Linking, Share, Alert, ActivityIndicator, useColorScheme, useWindowDimensions, Platform, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, Switch, Modal, FlatList, Linking, ActivityIndicator, useColorScheme, useWindowDimensions, Platform, StyleSheet } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
@@ -7,6 +7,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { advise, mapsLink, message, hm, nearest, AREAS, EXT, ROADS, NODES } from "./src/engine";
 import RouteMap from "./src/RouteMap";
+import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
 
 // ---------------------------------------------------------------- look
 const LIGHT = { bg: "#EEF0EC", surface: "#FFFFFF", sunk: "#E3E6E0", line: "#D3D7D0", fg: "#1E201C", muted: "#5B6058", accent: "#2B5FAD", accentInk: "#FFFFFF", accentSoft: "#E4ECF8", school: "#B35A00", schoolSoft: "#FBEBD9", slow: "#B03030", slowSoft: "#F8E1E1", ok: "#2E7D4F", okSoft: "#DFF1E6", road: "#C9CEC5" };
@@ -45,7 +46,7 @@ function Main() {
   useEffect(() => { (async () => {
     setSettings(await load("settings", settings)); setPlaces(await load("places", [])); setTrips(await load("trips", []));
     setReports((await load("reports", [])).filter(r => r.expires > Date.now())); setReady(true);
-    if (Platform.OS === "android") Notifications.setNotificationChannelAsync("leave", { name: "Time to leave", importance: Notifications.AndroidImportance.HIGH }).catch(() => {});
+    if (!isWeb && Platform.OS === "android") Notifications.setNotificationChannelAsync("leave", { name: "Time to leave", importance: Notifications.AndroidImportance.HIGH }).catch(() => {});
   })(); }, []);
   const upd = (k, v) => { const n = { ...settings, [k]: v }; setSettings(n); save("settings", n); };
   const setPl = v => { setPlaces(v); save("places", v); };
@@ -70,13 +71,15 @@ function Main() {
           </Pressable>
         ))}
       </View>
+      <Toast c={c} />
     </SafeAreaView>
   );
 }
 
 // ---------------------------------------------------------------- plan
 function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, setTr, goTest }) {
-  const { width } = useWindowDimensions();
+  const { width: winW } = useWindowDimensions();
+  const width = isWeb ? Math.min(winW, 430) : winW;
   const [from, setFrom] = useState({ kind: "area", node: "Pending", label: "Pending" });
   const [to, setTo] = useState({ kind: "area", node: "Batu Lintang", label: "Batu Lintang" });
   const [arrive, setArrive] = useState(450);
@@ -119,6 +122,7 @@ function PlanScreen({ s, c, f, settings, places, setPl, reports, setRe, trips, s
   const remind = async () => {
     const when = dateFor(dayOff, res.best.leave - 5);
     if (when.getTime() < Date.now()) { Alert.alert("Too late for a reminder", `Leave-by time ${hm(res.best.leave)} is less than 5 minutes away or already passed.`); return; }
+    if (isWeb) { webToast({ title: "Reminder set", msg: `${hm(res.best.leave - 5)}${dayOff ? " tomorrow" : ""}. On the phone this arrives as a notification.` }); return; }
     try {
       let { status } = await Notifications.getPermissionsAsync();
       if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;

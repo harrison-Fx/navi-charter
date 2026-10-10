@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<title>Kuching Trip Advisor</title>
+<style>
+  :root { --stage:#10151F; --ink:#E8ECF3; --muted:#93A0B5; --line:#26324A; --accent:#78A6EC; --done:#6FCB94; --bezel:#05070B; }
+  html, body { height:100%; margin:0; }
+  body { background:var(--stage); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
+  .stage { height:100%; display:flex; align-items:center; justify-content:center; gap:56px; padding:0 32px; box-sizing:border-box; }
+  .phone { --s:1; width:430px; height:900px; zoom:var(--s); flex:none; background:var(--bezel); border-radius:56px; padding:14px; box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 0 0 2px #1E2633; position:relative; }
+  .phone::before { content:""; position:absolute; top:22px; left:50%; width:110px; height:26px; margin-left:-55px; background:var(--bezel); border-radius:14px; z-index:5; }
+  #root { display:flex; height:100%; flex:1; border-radius:44px; overflow:hidden; padding-top:30px; box-sizing:border-box; background:#EEF0EC; }
+  @media (prefers-color-scheme: dark) { #root { background:#151815; } }
+  .cues { width:360px; max-height:86vh; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+  .cues h1 { font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0; font-weight:600; }
+  .cues h2 { font-size:26px; margin:0 0 6px; line-height:1.2; text-wrap:balance; }
+  .step { display:grid; grid-template-columns:34px 1fr; gap:4px 12px; padding:12px 14px; border:1px solid var(--line); border-radius:14px; cursor:pointer; user-select:none; }
+  .step .n { grid-row:span 2; width:30px; height:30px; border-radius:50%; border:2px solid var(--accent); color:var(--accent); display:grid; place-items:center; font-weight:700; font-variant-numeric:tabular-nums; }
+  .step b { font-size:16px; } .step span { font-size:14px; color:var(--muted); line-height:1.45; }
+  .step.done { opacity:.45; } .step.done .n { border-color:var(--done); color:var(--done); }
+  .hint { font-size:13px; color:var(--muted); line-height:1.5; }
+  kbd { border:1px solid var(--line); border-radius:5px; padding:0 5px; font-size:12px; }
+  body.clean .cues { display:none; }
+  @media (max-width: 900px) { .cues { display:none; } .stage { padding:0; } .phone { zoom:1 !important; width:100%; height:100%; border-radius:0; padding:0; box-shadow:none; } .phone::before { display:none; } #root { border-radius:0; padding-top:0; } }
+</style>
+<link rel="icon" href="./favicon.ico"/></head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone"><div id="root"></div></div>
+  <aside class="cues" aria-label="Demo script">
+    <h1>Backup demo · same app, in the browser</h1>
+    <h2>4-minute demo script</h2>
+    <div class="step"><div class="n">1</div><b>Normal morning</b><span>Pending → Batu Lintang, arrive 07:30, Tomorrow, School day, 90%. Tap "When should I leave?" Read the leave time and risk; point at "Why this advice".</span></div>
+    <div class="step"><div class="n">2</div><b>School day vs holiday</b><span>Stutong → Satok, 07:30. School day vs No school: the leave time moves back by several minutes.</span></div>
+    <div class="step"><div class="n">3</div><b>Something goes wrong</b><span>Road reports → Padungan–Pending → Closed. Ask again: new road, earlier leave time, main risk "Road closure". Show "Open in Google Maps".</span></div>
+    <div class="step"><div class="n">4</div><b>Outside-Kuching commuter</b><span>Samarahan → City Centre, arrive 08:00. "Traffic from outside Kuching" in the why box; map switches to Greater Kuching.</span></div>
+    <div class="step"><div class="n">5</div><b>Act</b><span>Remind me, Send as message (copies the text here), start a test trip → I'm leaving.</span></div>
+    <div class="step"><div class="n">6</div><b>Close</b><span>"Runs offline on the phone, under a second per answer. Next: real road map, shared reports, one-week pilot."</span></div>
+    <p class="hint">Click a step to tick it. <kbd>S</kbd> hides this panel for the audience. Reminders and sharing are phone features; here they show a note instead.</p>
+  </aside>
+</div>
+<script>
+  function fit(){ var s=Math.min(1,(innerHeight-40)/928, (innerWidth-(document.body.classList.contains('clean')?40:470))/458); document.getElementById('phone').style.setProperty('--s', Math.max(.5,s).toFixed(3)); }
+  addEventListener('resize', fit); fit();
+  document.querySelectorAll('.step').forEach(function(el){ el.addEventListener('click', function(){ el.classList.toggle('done'); }); });
+  addEventListener('keydown', function(e){ var t=e.target.tagName; if ((e.key==='s'||e.key==='S') && t!=='INPUT' && t!=='TEXTAREA' && !e.target.isContentEditable){ document.body.classList.toggle('clean'); fit(); } });
+</script>
+<script src="./_expo/static/js/web/index-1d51a5b9e909f0db9c0b36c9e1b8a80b.js" defer></script>
+</body>
+</html>
