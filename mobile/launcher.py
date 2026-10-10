@@ -255,8 +255,8 @@ class Launcher(ctk.CTk):
         has_pkgs = packages_ok()
         self.q.put(("row", "pkgs", has_pkgs, "installed" if has_pkgs else "missing or out of date", bool(node)))
         if node:
-            code, root = quick(["npm", "root", "-g"])
-            self.ngrok_ok = code == 0 and os.path.isdir(os.path.join(root.splitlines()[-1] if root else "", "@expo", "ngrok"))
+            # Expo looks for the tunnel helper in the project first; that copy is the reliable one.
+            self.ngrok_ok = os.path.isfile(os.path.join(APP_DIR, "node_modules", "@expo", "ngrok", "package.json"))
             self.q.put(("row", "ngrok", self.ngrok_ok, "installed" if self.ngrok_ok else "not installed (optional)", True))
         else:
             self.q.put(("row", "ngrok", False, "needs Node.js first", False))
@@ -274,7 +274,7 @@ class Launcher(ctk.CTk):
         elif key == "pkgs":
             self.run_task(["npm", "install", "--no-audit", "--no-fund"], "App packages installed.")
         elif key == "ngrok":
-            self.run_task(["npm", "install", "-g", "@expo/ngrok@^4.1.0"], "Tunnel helper installed.")
+            self.run_task(["npm", "install", "--no-audit", "--no-fund", "@expo/ngrok@^4.1.0"], "Tunnel helper installed.")
 
     def run_task(self, args, done_msg, raw=False):
         self.busy = True

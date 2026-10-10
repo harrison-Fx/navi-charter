@@ -219,3 +219,4 @@ Threshold trade-off: 0.3 → 46%/91% · 0.5 → 63%/83% · 0.7 → 73%/69%.
 - On the web, reminders show a note, sharing copies the text, and pop-ups become in-app notes (`src/webshim.js`); the phone app is unchanged (Android bundle rebuilt and checked).
 - Online copy published as the "Trip Advisor Demo" artifact. Checked here: advice, why box, map, reminder note and the cue-card toggle at 1366×768, both served and from the folder.
 - Flutter: decided against switching before the hackathon (can't build or test Flutter here; Expo already covers the demo).
+- Launcher fix: tunnel mode failed ('@expo/ngrok is required … install it globally?' in non-interactive mode) even though a global copy was installed. The tunnel helper is now an app package (`@expo/ngrok` in package.json) and the launcher checks the project copy.
