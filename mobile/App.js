@@ -71,7 +71,7 @@ function Main() {
     <SafeAreaView style={s.fill} edges={["top", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
       <View style={[s.header, { flexDirection: "row", alignItems: "flex-start" }]}>
-        <View style={{ flex: 1 }}><Text style={s.title}>Kuching Trip Advisor</Text><Text style={s.badge}>Practice version · made-up traffic</Text></View>
+        <View style={{ flex: 1 }}><Text style={s.title}>Kuching Trip Advisor</Text><Text style={s.badge}>Prototype · simulated traffic + live speeds</Text></View>
         {tab === "plan" && settings.tips === false && <Pressable onPress={() => upd("tips", true)} accessibilityRole="button" style={{ paddingVertical: 4, paddingLeft: 8 }}><Text style={[s.link, { fontSize: 13 }]}>How it works</Text></Pressable>}
       </View>
       <View style={{ flex: 1 }}>
@@ -572,7 +572,7 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
         <LiveTest s={s} c={c} />
         <Text style={s.label}>School hours (not confirmed yet)</Text>
         <Seg s={s} value={settings.sess} onChange={v => upd("sess", v)} options={[["morning", "Morning only"], ["both", "Morning + afternoon"]]} />
-        <Text style={[s.hint, { marginTop: 8 }]}>This practice version doesn't use live traffic. It estimates traffic from the type of road, the time of day, school hours and the settings above, to test whether the advice is useful before connecting real data.</Text>
+        <Text style={[s.hint, { marginTop: 8 }]}>The model estimates traffic from the type of road, the time of day, school hours and the settings above. For trips leaving within about 2 hours today, live speeds from TomTom adjust it; further ahead, it's the model only.</Text>
       </View>
       <View style={s.card}>
         <Text style={s.h2}>Demo</Text>
