@@ -40,6 +40,9 @@ Settings live in `eas.json` (profile `preview` builds an APK). To ship a new ver
 - `App.js` — screens (Plan, Test trips, Settings).
 - `src/engine.js` — the advice engine (JavaScript port of the approximate model).
 - `src/RouteMap.js` — simplified map (react-native-svg).
+- `src/live.js` + `src/config.js` — live traffic from TomTom's Traffic Flow API (key in config.js, restricted to the GitHub Pages site and localhost).
+- `src/places.js`, `src/PinMap.js`, `src/TripMap.web.js` — place search with context, drag-a-pin map, street map (web).
+- `src/Result.js`, `src/TimePick.js`, `src/Seg.js` — results view, time picker, toggles.
 - `launcher.py` / `OPEN-LAUNCHER.bat` — Windows launcher window (checks, connection choice, QR code, APK build button).
 - `BUILD-APK.bat`, `eas.json` — cloud APK build.
 - `assets/` — app icon (clock = when to leave, road = which way), splash.

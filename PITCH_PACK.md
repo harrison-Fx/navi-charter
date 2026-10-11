@@ -25,7 +25,7 @@ Before presenting, fill in: price placeholder on the proof slide (or delete it),
 2. **0:45 School day vs holiday (30 s).** Change the trip to Stutong → Satok (arrive 07:30): school day says leave 07:07 with two school zones; switch to *No school* and it says 07:14, school notes gone. "Seven minutes back, because we know the school timetable."
 3. **1:15 Something goes wrong (60 s).** Road reports → Padungan–Pending → *Closed / accident*. Ask again: route switches to Kenyalang → Simpang Tiga, earlier leave time, main risk now "Road closure". Show *Open in Google Maps*: the link carries a stop so Maps follows our road.
 4. **2:15 Outside-Kuching commuter (40 s).** From Samarahan → City Centre, arrive 08:00. Why box: traffic from outside Kuching on Stutong → Simpang Tiga. Map switches to Greater Kuching.
-5. **2:55 Act (35 s).** *Open in Google Maps*, *Remind me* (on the phone it's a notification), *Send as message* (copies a WhatsApp-ready text). Optional: type "hospital near Petra Jaya" in To to show it reads context. For testers → log the trip shows how we measure real results.
+5. **2:55 Act (35 s).** *Open in Google Maps*, *Remind me* (on the phone it's a notification), *Send as message* (copies a WhatsApp-ready text). Optional: type "hospital near Petra Jaya" in To to show it reads context, or plan a trip for Today 30–90 min ahead to show "Live traffic checked at …" (needs internet). For testers → log the trip shows how we measure real results.
 6. **3:30 Close (30 s).** "Runs in any browser, under a second per answer; scan the QR to try it. Next: real road map, shared reports, one-week pilot."
 
 Finding places (if asked): type a name ("Vivacity", "UNIMAS"), add a road or landmark to narrow it, or drop and drag a pin. Indoors, Settings → Demo makes "My location" pretend to be in Pending, Samarahan, etc.
@@ -35,7 +35,7 @@ Backup if Wi-Fi fails: `mobile/START-WEB-DEMO.bat` on the laptop. It is the same
 ## Q&A cheat sheet
 
 - **"Is this AI / machine learning?"** It's a probabilistic forecasting model, not ML, on purpose: Kuching has no years of trip data. We use the standard transport-engineering volume-delay function (BPR) and simulate uncertainty explicitly (Monte Carlo). Real counts calibrate it; ML can be added later on collected trips.
-- **"Where does your data come from?"** OpenStreetMap roads; 38 Kuching schools (Wikipedia list; hours not yet confirmed); entry roads from public sources (Samarahan Expressway, FT 8302, Kuching–Serian). Traffic volumes are assumptions; we say so on the slide. Next: JKR / council counts.
+- **"Where does your data come from?"** Live speeds from TomTom for trips leaving within about 2 hours (Settings → Traffic → Test live traffic shows it working). OpenStreetMap roads; 38 Kuching schools (Wikipedia list; hours not yet confirmed); entry roads from public sources (Samarahan Expressway, FT 8302, Kuching–Serian). Traffic volumes are assumptions; we say so on the slide. Next: JKR / council counts.
 - **"Why not just use Waze or Google Maps?"** They react to traffic that exists and give everyone the same shortcut. We predict the departure decision and plan with other trips in mind. And we hand off to Google Maps for driving, so users keep their app.
 - **"What if everyone uses it?"** That's the design point: it counts planned trips and spreads them. Our test of "everyone gets the same advice" (random split / typical app) is in the results. Nobody can pay for priority.
 - **"How do you know it works?"** Simulation today (60 days × 3 seeds, paired comparisons with confidence intervals) plus a built-in test log for a one-week field pilot that times every real trip. We report the honest finding: on normal days timing matters most; spreading pays on bad days.
@@ -43,7 +43,8 @@ Backup if Wi-Fi fails: `mobile/START-WEB-DEMO.bat` on the laptop. It is the same
 - **"What if the data is noisy?"** Noise scan (`outputs/v9/noise_scan_approx.txt`): on closure days the advisor beats the typical app at every noise level tried (+0.6 to +1.9 points). Warning quality depends on the live traffic reading: precision 85% with a good reading, 71% with our default, 50% with a poor one. That's why live data sources are on the roadmap.
 - **"Privacy?"** No account; saved places stay on the phone; shared plans will carry a throwaway ID (PDPA-friendly).
 - **"Business model?"** Fleets pay for dispatch tools (per van per month); commuters free. Never sell road priority.
-- **"Weaknesses?"** Approximate map until the real-map run; assumed volumes; mid-range probabilities a bit cautious (over-warn); school hours unverified. Each has a named fix.
+- **"Is the traffic real?"** For trips in the next ~2 hours, yes: TomTom's current speeds adjust the model. For tomorrow, it's the model only, because live traffic can't see the future; historical patterns from councils or TomTom are the next step.
+- **"Weaknesses?"** Approximate map until the real-map run; assumed volumes; live speeds only for the next couple of hours; mid-range probabilities a bit cautious (over-warn); school hours unverified. Each has a named fix.
 
 ## Numbers used (from `outputs/v7/`, approximate map, simulated)
 

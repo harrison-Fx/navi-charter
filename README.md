@@ -58,6 +58,7 @@ Backup link: https://raw.githack.com/harrison-Fx/navi-charter/main/docs/index.ht
 3. **Uncertainty:** each departure time is tried hundreds of times with random traffic (Monte Carlo\*), giving a **chance of being late** and an **arrival range**, not a single guess.
 4. **Herd-aware\*:** each trip is planned against the trips already planned, spreading people across roads.
 5. **Sensible routes:** it only sends you a different way if you can leave at least 3 minutes later or be clearly safer; otherwise it keeps the usual road.
+6. **Live check (trips leaving soon):** for trips leaving within about 2 hours today, the app reads TomTom's current speed on each road of the candidate routes and slows those roads by how much slower than normal they are now. The adjustment is full for the next 20 minutes and fades out by about 2.5 hours, because live traffic can't see further ahead.
 
 \* *BPR: the standard traffic-engineering formula; travel time climbs steeply as a road fills. Monte Carlo: re-running a trip many times with random traffic. Herd-aware: planning each trip around everyone else's.*
 
@@ -92,7 +93,8 @@ Open https://harrison-fx.github.io/navi-charter/ (or the backup link above).
 3. **Something goes wrong.** Open **Road reports**, pick `Padungan–Pending`, tap **Closed / accident**, then ask again. The route avoids that road, the leave time moves earlier (about 07:04) and "Road closure" becomes the reason.
 4. **Coming from outside Kuching.** From `Samarahan` to `City Centre`, arrive **08:00**. The reason becomes "Traffic from outside Kuching" and the busy stretches say "lots from Samarahan".
 5. **Use the map.** Tap the map to set A, then B, and drag a pin. Online, the pin is named after the street.
-6. **Settings:** switch themes; "Demo" makes *My location* pretend you're in a chosen area (handy indoors).
+6. **Live traffic:** in **Settings → Traffic**, tap **Test live traffic** (it shows the current speed near the city centre). Then plan a trip for **Today** arriving 30–90 minutes from now: the result says "Live traffic checked at …" and flags any road that is slow right now.
+7. **Settings:** switch themes; "Demo" makes *My location* pretend you're in a chosen area (handy indoors).
 
 ## 6. Run it locally
 
@@ -112,12 +114,13 @@ We'd rather say these first:
 - **Main results use an approximate 16-area map.** The real-road run is scripted (`RUN-REAL-MAP.bat`) but not yet in the table.
 - **School hours are not confirmed** for every school; the app says so.
 - **Landmark positions in place search are approximate** (about ±1 km); pins can be dragged.
-- **Not covered yet:** weather, events and live incidents (road reports are the stand-in).
+- **Live traffic only covers the next couple of hours** and is sampled at one point per road; it uses TomTom's free tier (about 2,500 requests a day).
+- **Not covered yet:** weather and events (road reports and live speeds are the stand-in).
 
 ## 8. What's next
 
 1. **One-week pilot:** one fleet and 20 commuters; the app's built-in test log times every real trip against its prediction.
-2. **Real data:** council and JKR traffic counts, confirmed school sessions, optional live traffic.
+2. **Real data:** council and JKR traffic counts and historical speed patterns (so predictions for tomorrow use real data too), confirmed school sessions.
 3. **Shared road reports and a small server** so planned trips spread across all users, not just one phone.
 
 ## Repository map
