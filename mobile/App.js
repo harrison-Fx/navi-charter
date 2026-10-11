@@ -121,6 +121,8 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
   const [showReport, setShowReport] = useState(false);
   const [pin, setPin] = useState(null);   // { which: "from" | "to" }
   const scroller = useRef(null), resY = useRef(0);
+  const [alt, setAlt] = useState(null);           // index into res.routes when the user picks another way
+  useEffect(() => { setAlt(null); }, [res]);
   useEffect(() => { if (res && !res.err) setTimeout(() => scroller.current && scroller.current.scrollTo({ y: Math.max(0, resY.current - 12), animated: true }), 80); }, [res]);
 
   useEffect(() => { setSchool(!isWeekend(dayOff)); }, [dayOff]);
@@ -155,34 +157,38 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
       setRes(r); setBusy(false);
     }, 30);
   };
-  const link = res && !res.err ? mapsLink(res, from.ll, to.ll, from.kind === "here") : null;
-  const msg = res && !res.err ? message(res, from.kind === "here" ? "" : from.label, to.label) : "";
+  // the route being shown: the advised one, or another the user tapped in "Other ways to go"
+  const ok = res && !res.err;
+  const chosen = ok && alt !== null && res.routes[alt] && res.routes[alt] !== res.best ? res.routes[alt] : null;
+  const view = ok && chosen ? { ...res, best: chosen, gain: Math.max(0, chosen.leave - res.fastest.leave), keptUsual: false } : res;
+  const link = ok ? mapsLink(view, from.ll, to.ll, from.kind === "here") : null;
+  const msg = ok ? message(view, from.kind === "here" ? "" : from.label, to.label) : "";
 
   const remind = async () => {
-    const when = dateFor(dayOff, res.best.leave - 5);
-    if (when.getTime() < Date.now()) { Alert.alert("Too late for a reminder", `Leave-by time ${hm(res.best.leave)} is less than 5 minutes away or already passed.`); return; }
-    if (isWeb) { webToast({ title: "Reminder set", msg: `${hm(res.best.leave - 5)}${dayOff ? " tomorrow" : ""}. On the phone this arrives as a notification.` }); return; }
+    const when = dateFor(dayOff, view.best.leave - 5);
+    if (when.getTime() < Date.now()) { Alert.alert("Too late for a reminder", `Leave-by time ${hm(view.best.leave)} is less than 5 minutes away or already passed.`); return; }
+    if (isWeb) { webToast({ title: "Reminder set", msg: `${hm(view.best.leave - 5)}${dayOff ? " tomorrow" : ""}. On the phone this arrives as a notification.` }); return; }
     try {
       let { status } = await Notifications.getPermissionsAsync();
       if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
       if (status !== "granted") { Alert.alert("Notifications are off", "Allow notifications for this app to get a reminder."); return; }
       await Notifications.scheduleNotificationAsync({
-        content: { title: `Leave in 5 minutes (${hm(res.best.leave)})`, body: `To reach ${to.label} by ${hm(arrive)}. Go via ${res.best.via.join(", ") || "the direct road"}.` },
+        content: { title: `Leave in 5 minutes (${hm(view.best.leave)})`, body: `To reach ${to.label} by ${hm(arrive)}. Go via ${view.best.via.join(", ") || "the direct road"}.` },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when, channelId: "leave" },
       });
-      Alert.alert("Reminder set", `We'll remind you at ${hm(res.best.leave - 5)}${dayOff ? " tomorrow" : ""}.`);
+      Alert.alert("Reminder set", `We'll remind you at ${hm(view.best.leave - 5)}${dayOff ? " tomorrow" : ""}.`);
     } catch (e) { Alert.alert("Couldn't set the reminder", String(e?.message || e)); }
   };
 
   const startTest = mode => {
-    const b = res.best;
+    const b = view.best;
     const t = { id: String(Date.now()), tester: settings.nick || "me", date: ymd(dateFor(dayOff, 0)), from: from.label, fromNode: from.node, to: to.label, toNode: to.node, arriveBy: hm(arrive), school, mode,
       plan: { leave: hm(b.leave), via: b.via.join(" → ") || "direct", pLate: Math.round(b.pLate * 100), etaLo: hm(b.lo), etaMid: hm(b.mid), etaHi: hm(b.hi), stop: link.stop || "", url: link.url, plain: link.plain },
       left: null, arrived: null, mapsKept: null, notes: "" };
     setTr([t, ...trips]); goTest();
   };
 
-  const b = res && !res.err ? res.best : null;
+  const b = ok ? view.best : null;
   const pl = b ? Math.round(b.pLate * 100) : 0;
   const risk = pl <= 10 ? ["Low risk", "ok"] : pl <= 25 ? ["Medium risk", "warn"] : ["High risk", "bad"];
   const causes = b ? riskCauses(b, active) : [];
@@ -236,9 +242,10 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
       {res?.err && <View style={s.card}><Text style={s.body}>{res.err}</Text></View>}
       {b && (
         <View onLayout={e => { resY.current = e.nativeEvent.layout.y; }}>
-          <Result {...{ s, c, res, b, from, to, arrive, dayOff, conf, school, causes, risk, pl, link, Btn, Pill, Note, RouteMap }} nowMin={nowMin()} mapWidth={Math.min(width - 64, 520)}
+          <Result {...{ s, c, b, from, to, arrive, dayOff, conf, school, causes, risk, pl, link, Btn, Pill, Note, RouteMap }} nowMin={nowMin()} mapWidth={Math.min(width - 64, 520)}
             onMaps={() => Linking.openURL(link.url)} onMapsPlain={() => Linking.openURL(link.plain)} onRemind={remind}
             onShare={() => Share.share({ message: msg }).catch(() => {})} onTest={startTest}
+            res={view} advised={res.best} chosen={!!chosen} onPickRoute={i => { setAlt(res.routes[i] === res.best ? null : i); setTimeout(() => scroller.current && scroller.current.scrollTo({ y: Math.max(0, resY.current - 12), animated: true }), 60); }}
             closedNotes={active.filter(r => r.kind === "closed").length ? <Text style={[s.hint, { marginTop: 6 }]}>Avoiding {active.filter(r => r.kind === "closed").map(r => roadName(r.road)).join(", ")} (reported closed).</Text> : null} />
         </View>
       )}

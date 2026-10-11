@@ -83,13 +83,19 @@ function Stops({ s, c, b, from, to, school }) {
   );
 }
 
-export default function Result({ s, c, res, b, from, to, arrive, dayOff, conf, school, causes, risk, pl, link, nowMin, onMaps, onMapsPlain, onRemind, onShare, onTest, Btn, Pill, Note, RouteMap, mapWidth, closedNotes }) {
+export default function Result({ s, c, res, b, advised, chosen, onPickRoute, from, to, arrive, dayOff, conf, school, causes, risk, pl, link, nowMin, onMaps, onMapsPlain, onRemind, onShare, onTest, Btn, Pill, Note, RouteMap, mapWidth, closedNotes }) {
   const [showTest, setShowTest] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const spare = Math.round(arrive - b.mid);
   const tone = { ok: [c.okSoft, c.ok], warn: [c.schoolSoft, c.school], bad: [c.slowSoft, c.slow] }[risk[1]];
   return (
     <View style={{ gap: 12 }}>
+      {chosen && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, backgroundColor: c.schoolSoft, borderWidth: 1, borderColor: c.school }}>
+          <Text style={[s.body, { flex: 1 }]}>Showing the way you picked{advised ? ` (advised: leave ${hm(advised.leave)}${advised.via.length ? " via " + advised.via.join(", ") : ""})` : ""}.</Text>
+          <Pressable onPress={() => onPickRoute(res.routes.indexOf(advised))} accessibilityRole="button"><Text style={[s.link, { fontSize: 14 }]}>Back to advised</Text></Pressable>
+        </View>
+      )}
       <View style={[s.card, { padding: 0, overflow: "hidden" }]}>
         <View style={{ padding: 16, paddingBottom: 12, backgroundColor: c.accentSoft, gap: 2 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -156,21 +162,23 @@ export default function Result({ s, c, res, b, from, to, arrive, dayOff, conf, s
       <View style={s.card}>
         <Text style={s.label}>Other ways to go</Text>
         {res.routes.map((r, i) => {
-          const on = r === b, p = Math.round(r.pLate * 100), t = p <= 10 ? c.ok : p <= 25 ? c.school : c.slow;
+          const on = r === b, isAdv = r === (advised || b), p = Math.round(r.pLate * 100), t = p <= 10 ? c.ok : p <= 25 ? c.school : c.slow;
           return (
-            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 10, marginTop: 4, backgroundColor: on ? c.accentSoft : "transparent", borderWidth: 1, borderColor: on ? c.accent : c.line }}>
+            <Pressable key={i} onPress={() => onPickRoute && onPickRoute(i)} accessibilityRole="button" accessibilityState={{ selected: on }}
+              accessibilityLabel={`${r.via.length ? "via " + r.via.join(", ") : "Direct"}, leave ${hm(r.leave)}, ${p}% chance of being late${on ? ", shown" : ", tap to see this way"}`}
+              style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 10, borderRadius: 10, marginTop: 4, backgroundColor: on ? c.accentSoft : pressed ? c.sunk : "transparent", borderWidth: 1, borderColor: on ? c.accent : c.line, cursor: "pointer" }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[s.body, { fontWeight: on ? "700" : "500" }]} numberOfLines={1}>{r.via.length ? "via " + r.via.join(", ") : "Direct"}</Text>
-                <Text style={s.hint}>{on ? "Advised · " : ""}{r === res.fastest ? "usual road · " : ""}{Math.round(r.typical)} min · {r.km.toFixed(1)} km</Text>
+                <Text style={s.hint}>{isAdv ? "Advised · " : ""}{r === res.fastest ? "usual road · " : ""}{Math.round(r.typical)} min · {r.km.toFixed(1)} km{on ? "" : " · tap to see"}</Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={[s.mono, { fontWeight: "700", fontSize: 15 }]}>{r.ok ? hm(r.leave) : "—"}</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: t }} /><Text style={s.hint}>{p}% late</Text></View>
               </View>
-            </View>
+            </Pressable>
           );
         })}
-        <Text style={[s.hint, { marginTop: 8 }]}>Leave-by times for {Math.round(conf * 100)}% sure. Made-up traffic, tried 240 times per route.</Text>
+        <Text style={[s.hint, { marginTop: 8 }]}>Leave-by times for {Math.round(conf * 100)}% sure. Tap a way to see its details and Maps link. Made-up traffic, tried 240 times per route.</Text>
       </View>
 
       <View style={s.card}>
