@@ -43,6 +43,20 @@ function TimelineBar({ s, c, b, arrive }) {
   );
 }
 
+function LiveBadge({ s, c, live }) {
+  const on = !!live.ok;
+  const text = on ? `Live traffic checked at ${hm(live.at)} · ${live.ok} of ${live.of} roads`
+    : live.skipped === "tomorrow" ? "Live traffic not used: it only sees the next couple of hours, not tomorrow"
+    : live.skipped ? "Live traffic not used: this trip is too far ahead"
+    : `Live traffic unavailable (${live.error}). Using the model only`;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: on ? c.ok : c.muted }} />
+      <Text style={[s.hint, { color: on ? c.ok : c.muted, fontWeight: on ? "700" : "400", flex: 1 }]}>{text}</Text>
+    </View>
+  );
+}
+
 function Stops({ s, c, b, from, to, school }) {
   const names = [from.label, ...b.via, to.label];
   const times = [b.leave, ...b.busy.slice(1).map(x => x.at), b.mid];
@@ -55,6 +69,7 @@ function Stops({ s, c, b, from, to, school }) {
         const flags = [];
         if (sch) flags.push([c.school, `school zone ~${hm(sch.at)}`]);
         if (seg && seg.reportedJam) flags.push([c.slow, "reported jam"]);
+        if (seg && seg.live && seg.live.ratio >= 1.25) flags.push([c.slow, `live: ${Math.round(seg.live.cur)} km/h now (normally ${Math.round(seg.live.free)})`]);
         if (seg && seg.vc > .85) flags.push([c.slow, `${seg.vc >= 1 ? "very busy" : "busy"}${seg.outsideShare > .3 && seg.outsideFrom ? ` · lots from ${seg.outsideFrom}` : ""}`]);
         return (
           <View key={i} style={{ flexDirection: "row", gap: 12 }}>
@@ -74,7 +89,7 @@ function Stops({ s, c, b, from, to, school }) {
                 ? <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>{flags.map(([col, t], k) => (
                     <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: c.sunk }}>
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: col }} /><Text style={{ fontSize: 12, color: c.fg }}>{t}</Text></View>))}</View>
-                : <Text style={[s.hint, { marginTop: 2 }]}>{seg ? `${seg.road} · ${school ? "clear" : "normal traffic"}` : ""}</Text>)}
+                : <Text style={[s.hint, { marginTop: 2 }]}>{seg ? `${seg.road} · ${seg.live ? "flowing normally now (live)" : school ? "clear" : "normal traffic"}` : ""}</Text>)}
             </View>
           </View>
         );
@@ -109,6 +124,7 @@ export default function Result({ s, c, res, b, advised, chosen, onPickRoute, fro
             </View>
           </View>
           <Text style={[s.hint, { color: c.fg }]} numberOfLines={2}>{from.label} → {to.label} · {b.km.toFixed(1)} km · about {Math.round(b.typical)} min</Text>
+          {res.live ? <LiveBadge s={s} c={c} live={res.live} /> : null}
         </View>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
           <TimelineBar s={s} c={c} b={b} arrive={arrive} />

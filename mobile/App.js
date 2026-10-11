@@ -12,6 +12,7 @@ import TimePick from "./src/TimePick";
 import Result from "./src/Result";
 import PinMap from "./src/PinMap";
 import { searchOffline, searchOnline, streetName, suggest, suggestOnline } from "./src/places";
+import { liveFor, testLive } from "./src/live";
 import TripMap, { hasTripMap } from "./src/TripMap";
 import { Alert, Share, Toast, isWeb, webToast } from "./src/webshim";
 import Sheet from "./src/Sheet";
@@ -44,7 +45,7 @@ export default function App() {
 
 function Main() {
   const sysDark = useColorScheme() === "dark";
-  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "", theme: "auto", tips: true });
+  const [settings, setSettings] = useState({ nick: "", big: false, commOn: true, vansOn: true, sess: "morning", fakeHere: isWeb ? "Pending" : "", theme: "auto", tips: true, live: true });
   const [places, setPlaces] = useState([]);
   const [trips, setTrips] = useState([]);
   const [reports, setReports] = useState([]);
@@ -120,6 +121,7 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
   const [res, setRes] = useState(null);
   const [showReport, setShowReport] = useState(false);
   const [pin, setPin] = useState(null);   // { which: "from" | "to" }
+  const [liveBusy, setLiveBusy] = useState(false);
   const scroller = useRef(null), resY = useRef(0);
   const [alt, setAlt] = useState(null);           // index into res.routes when the user picks another way
   useEffect(() => { setAlt(null); }, [res]);
@@ -152,8 +154,23 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
   const active = reports.filter(r => r.expires > Date.now());
   const run = () => {
     setBusy(true);
-    setTimeout(() => {
-      const r = advise({ from: from.node, to: to.node, arriveBy: arrive, conf, day: school ? "term" : "holiday", sess: settings.sess, commOn: settings.commOn, vansOn: settings.vansOn, closed: active.filter(x => x.kind === "closed").map(x => x.road), slow: active.filter(x => x.kind === "jam").map(x => x.road) });
+    setTimeout(async () => {
+      const base = { from: from.node, to: to.node, arriveBy: arrive, conf, day: school ? "term" : "holiday", sess: settings.sess, commOn: settings.commOn, vansOn: settings.vansOn, closed: active.filter(x => x.kind === "closed").map(x => x.road), slow: active.filter(x => x.kind === "jam").map(x => x.road) };
+      let r = advise(base);
+      // live traffic: only for trips leaving within the next ~2.5 hours today
+      if (settings.live !== false && r && !r.err) {
+        const now = nowMin();
+        if (dayOff || r.best.leave - now > 150) r.live = { skipped: dayOff ? "tomorrow" : "later" };
+        else if (r.best.leave - now < -5) r.live = { skipped: "past" };
+        else {
+          setLiveBusy(true);
+          const roads = [...new Set(r.routes.flatMap(x => x.roads))];
+          const L = await liveFor(roads);
+          setLiveBusy(false);
+          if (L.ok) { r = advise({ ...base, live: { data: L.data, now } }); r.live = { at: now, ok: L.ok, of: roads.length }; }
+          else r.live = { error: L.error || "couldn't reach the live traffic service" };
+        }
+      }
       setRes(r); setBusy(false);
     }, 30);
   };
@@ -229,7 +246,7 @@ function PlanScreen({ s, c, f, settings, upd, places, setPl, reports, setRe, tri
         <Text style={[s.label, { marginTop: 12 }]}>How sure do you want to be?</Text>
         <Text style={[s.hint, { marginTop: -4, marginBottom: 6 }]}>90% means you'd be late about 1 trip in 10. Higher means leaving a bit earlier.</Text>
         <Seg s={s} value={conf} onChange={setConf} options={[[.8, "80%"], [.9, "90%"], [.95, "95%"]]} />
-        <View style={{ marginTop: 14 }}><Btn s={s} kind="solid" label={busy ? "Working it out…" : "When should I leave?"} onPress={run} /></View>
+        <View style={{ marginTop: 14 }}><Btn s={s} kind="solid" label={busy ? (liveBusy ? "Checking live traffic…" : "Working it out…") : "When should I leave?"} onPress={run} /></View>
         {active.length > 0 && <Text style={[s.hint, { marginTop: 8 }]}>{active.length} road report{active.length > 1 ? "s" : ""} included.</Text>}
       </View>
 
@@ -267,6 +284,8 @@ function riskCauses(b, reports) {
   const out = [];
   const closed = reports.filter(r => r.kind === "closed");
   if (closed.length) out.push({ w: 100, label: "Road closure", detail: `Avoiding ${closed.map(r => roadName(r.road)).join(", ")}, which was reported closed.` });
+  const liveSlow = b.busy.filter(x => x.live && x.live.ratio >= 1.3).sort((p, q) => q.live.ratio - p.live.ratio);
+  if (liveSlow.length) { const x = liveSlow[0]; out.push({ w: 95, label: "Slow right now (live traffic)", detail: `${x.road} is moving at about ${Math.round(x.live.cur)} km/h right now; normally ${Math.round(x.live.free)} km/h.` }); }
   const jam = b.busy.filter(x => x.reportedJam);
   if (jam.length) out.push({ w: 90, label: "Reported jam", detail: `${jam[0].road} has a reported jam; it's included in the times.` });
   if (b.schools.length) { const x = b.schools[0]; out.push({ w: 60 + 10 * b.schools.length, label: "School rush", detail: `You pass ${x.road} around ${hm(x.at)}, during school drop-off or pick-up.` }); }
@@ -498,6 +517,19 @@ function OpenTrip({ s, c, t, patch, remove }) {
 }
 
 // ---------------------------------------------------------------- settings
+function LiveTest({ s, c }) {
+  const [st, setSt] = useState(null);
+  const go = async () => { setSt("busy"); setSt(await testLive()); };
+  return (
+    <View style={{ gap: 6, marginBottom: 8 }}>
+      <Pressable onPress={go} accessibilityRole="button"><Text style={s.link}>{st === "busy" ? "Checking…" : "Test live traffic"}</Text></Pressable>
+      {st && st !== "busy" && (st.ok
+        ? <Text style={[s.hint, { color: c.ok }]}>Working. Near the city centre now: {Math.round(st.cur)} km/h (normally {Math.round(st.free)} km/h){st.closed ? ", road closed" : ""}.</Text>
+        : <Text style={[s.hint, { color: c.slow }]}>Not working: {st.error}.</Text>)}
+    </View>
+  );
+}
+
 function SettingsScreen({ s, c, settings, upd, places, setPl }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -533,9 +565,11 @@ function SettingsScreen({ s, c, settings, upd, places, setPl }) {
         <Btn s={s} kind="ghost" label={busy ? "Finding you…" : "Save where I am now"} onPress={saveHere} />
       </View>
       <View style={s.card}>
-        <Text style={s.h2}>Made-up traffic</Text>
+        <Text style={s.h2}>Traffic</Text>
         <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>People driving in from Samarahan, Siburan, Matang, Samariang, Sejingkat</Text><Switch value={settings.commOn} onValueChange={v => upd("commOn", v)} /></View>
         <View style={s.switchRow}><Text style={[s.body, { flex: 1 }]}>400 delivery vans leaving depots at 7:00</Text><Switch value={settings.vansOn} onValueChange={v => upd("vansOn", v)} /></View>
+        <View style={s.switchRow}><View style={{ flex: 1 }}><Text style={s.body}>Live traffic (TomTom)</Text><Text style={s.hint}>For trips leaving within about 2 hours today. Needs internet.</Text></View><Switch value={settings.live !== false} onValueChange={v => upd("live", v)} /></View>
+        <LiveTest s={s} c={c} />
         <Text style={s.label}>School hours (not confirmed yet)</Text>
         <Seg s={s} value={settings.sess} onChange={v => upd("sess", v)} options={[["morning", "Morning only"], ["both", "Morning + afternoon"]]} />
         <Text style={[s.hint, { marginTop: 8 }]}>This practice version doesn't use live traffic. It estimates traffic from the type of road, the time of day, school hours and the settings above, to test whether the advice is useful before connecting real data.</Text>

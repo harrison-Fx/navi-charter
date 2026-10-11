@@ -64,7 +64,12 @@ function makeCtx(opts) {
     if (S.herd) { const b = Math.floor(m / P.bin); vc += (S.herd[e.id]?.[b] || 0) * (15 / P.bin) / e.cap; }
     return vc;
   };
-  S.edgeTime = (e, m) => S.closed.has(e.c) ? Infinity : e.t0 * (1 + P.a * S.vcAt(e, m) ** P.b);
+  // live traffic (optional): TomTom's current/normal speed ratio, full weight for the next ~20 min,
+  // fading to nothing ~2.5 h ahead (live traffic can't see further than that)
+  S.liveW = m => !S.live ? 0 : (d => d <= 20 ? 1 : d >= 150 ? 0 : 1 - (d - 20) / 130)(m - S.live.now);
+  S.liveF = (e, m) => { const L = S.live && S.live.data[e.c]; return L ? 1 + (L.ratio - 1) * S.liveW(m) : 1; };
+  S.liveShut = (e, m) => { const L = S.live && S.live.data[e.c]; return !!(L && L.closed && m - S.live.now < 90); };
+  S.edgeTime = (e, m) => S.closed.has(e.c) || S.liveShut(e, m) ? Infinity : e.t0 * (1 + P.a * S.vcAt(e, m) ** P.b) * S.liveF(e, m);
   S.travel = (path, dep, noise) => { let t = dep; for (const e of path) t += S.edgeTime(e, t) * (noise ? noise[e.id] : 1); return t - dep; };
   return S;
 }
@@ -128,7 +133,7 @@ function context(opts) {
 
 /** Advice for one trip. opts: {from, to (node names), arriveBy (minutes), conf (0.8|0.9|0.95), day, sess, commOn, vansOn, closed, slow} */
 export function advise(opts) {
-  const S = context(opts); const o = opts.from, d = opts.to;
+  const S = context(opts); if (opts.live) S.live = opts.live; const o = opts.from, d = opts.to;
   if (o === d) return { err: `Start and destination are both in ${o}. For a trip this short, just go.` };
   const rs = routes(S, o, d); if (!rs.length) return { err: "No way through with the reported closures. Clear a report and try again." };
   const arr = opts.arriveBy, conf = opts.conf || .9, r = rng(hashStr([o, d, arr, S.day, S.sess, S.commOn, S.vansOn].join("|")));
@@ -139,7 +144,7 @@ export function advise(opts) {
     let pick = null; for (const x of deps) if (x.pl <= 1 - conf) pick = x; const ok = !!pick; if (!pick) pick = deps[0];
     const q = f => pick.dep + pick.ts[Math.min(pick.ts.length - 1, Math.floor(f * pick.ts.length))];
     let m = pick.dep; const schools = [], busy = [];
-    for (const e of p) { if (S.schoolOn(e, m)) schools.push({ road: e.name, at: m, n: e.nS, c: e.c }); const b = Math.floor(m / P.bin); let h = 0; for (let k = b - 3; k <= b + 3; k++) h += S.herd[e.id]?.[k] || 0; const vc = S.vcAt(e, m); const share = S.comm ? ((S.comm.in[e.id] || 0) * tide(m, 440, 45) + (S.comm.out[e.id] || 0) * tide(m, 1065, 50)) / e.cap / vc : 0; busy.push({ road: e.name, c: e.c, at: m, vc, vans: h, outsideShare: share, outsideFrom: topZone(S, e), reportedJam: S.slow.has(e.c) }); m += S.edgeTime(e, m); }
+    for (const e of p) { if (S.schoolOn(e, m)) schools.push({ road: e.name, at: m, n: e.nS, c: e.c }); const b = Math.floor(m / P.bin); let h = 0; for (let k = b - 3; k <= b + 3; k++) h += S.herd[e.id]?.[k] || 0; const vc = S.vcAt(e, m); const share = S.comm ? ((S.comm.in[e.id] || 0) * tide(m, 440, 45) + (S.comm.out[e.id] || 0) * tide(m, 1065, 50)) / e.cap / vc : 0; busy.push({ road: e.name, c: e.c, at: m, vc, vans: h, outsideShare: share, outsideFrom: topZone(S, e), reportedJam: S.slow.has(e.c), live: S.live && S.live.data[e.c] && S.liveW(m) > .3 ? S.live.data[e.c] : null }); m += S.edgeTime(e, m); }
     return { via: p.slice(0, -1).map(e => e.v), roads: p.map(e => e.c), km: plen(p), leave: pick.dep, ok, pLate: pick.pl, lo: q(.1), mid: q(.5), hi: q(.9), typical: pick.ts[Math.floor(pick.ts.length / 2)], schools, busy, vans: Math.max(0, ...busy.map(b => b.vans)) };
   });
   const okR = out.filter(x => x.ok); const pool = (okR.length ? okR : out).slice();

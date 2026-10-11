@@ -15,7 +15,7 @@ Backup link: https://raw.githack.com/harrison-Fx/navi-charter/main/docs/index.ht
 <img src="media/results.png" width="300" alt="Result: leave by 07:13, low risk 8% chance of being late, timeline to a 07:30 deadline, reason: school rush">
 </p>
 
-> **Honesty note:** traffic in this prototype is **simulated** from road types, time of day, school hours and assumed volumes. The method is real and tested; real-world accuracy needs a pilot and real traffic counts (see [Limitations](#limitations)).
+> **Honesty note:** the traffic model is **simulated** from road types, time of day, school hours and assumed volumes. For trips leaving within the next couple of hours, the app also reads **live traffic speeds (TomTom)** and adjusts. The method is tested in simulation; real-world accuracy needs a pilot and real traffic counts (see [Limitations](#limitations)).
 
 ---
 
@@ -47,6 +47,7 @@ Backup link: https://raw.githack.com/harrison-Fx/navi-charter/main/docs/index.ht
 - **Easy time:** tap a common time, type it (`8:15`, `815`, `8.15pm`) or drag a day bar that shows busy periods.
 - **The answer:** leave-by time with countdown, risk level (Low / Medium / High), a timeline to your deadline, minutes to spare, the main reason, and each stretch of road flagged (school zone, very busy, lots of traffic from Samarahan, reported jam).
 - **Act on it:** open Google Maps (we plan, Maps drives), reminder, share as message.
+- **Live traffic (TomTom):** for trips leaving within about 2 hours today, current speeds on each road along the route adjust the prediction; slow roads are flagged "live: 14 km/h now (normally 42)". Further ahead (e.g. tomorrow) it uses the model only, because live traffic can't see the future. Switch in Settings, with a "Test live traffic" button.
 - **Road reports:** mark a road closed or jammed and the advice routes around it.
 - **Themes:** Light, Dark, Navy, Midnight. No account needed; settings stay on the device.
 
@@ -107,7 +108,7 @@ Open https://harrison-fx.github.io/navi-charter/ (or the backup link above).
 ## 7. Limitations
 
 We'd rather say these first:
-- **Traffic is simulated.** Volumes are assumptions until JKR or council traffic counts are available; real-world accuracy is not yet measured.
+- **Traffic is simulated** beyond the next couple of hours. Volumes are assumptions until JKR or council traffic counts are available; real-world accuracy is not yet measured. Live speeds are sampled at one point per road on our simplified map.
 - **Main results use an approximate 16-area map.** The real-road run is scripted (`RUN-REAL-MAP.bat`) but not yet in the table.
 - **School hours are not confirmed** for every school; the app says so.
 - **Landmark positions in place search are approximate** (about ±1 km); pins can be dragged.
