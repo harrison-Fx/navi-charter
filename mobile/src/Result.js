@@ -194,7 +194,7 @@ export default function Result({ s, c, res, b, advised, chosen, onPickRoute, fro
             </Pressable>
           );
         })}
-        <Text style={[s.hint, { marginTop: 8 }]}>Leave-by times for {Math.round(conf * 100)}% sure. Tap a way to see its details and Maps link. Made-up traffic, tried 240 times per route.</Text>
+        <Text style={[s.hint, { marginTop: 8 }]}>Leave-by times for {Math.round(conf * 100)}% sure. Tap a way to see its details and Maps link. Each way tried 240 times with varied traffic.</Text>
       </View>
 
       <View style={s.card}>
